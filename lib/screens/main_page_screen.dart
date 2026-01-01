@@ -25,7 +25,7 @@ class _MainPageScreenState extends State<MainPageScreen> with TickerProviderStat
   // PATHS ASSETS
   final String _plantImagePath = 'assets/images/plant_level6.svg';
   final String _albumImagePath = 'assets/images/plants_calendar_album.svg';
-  final String _potImagePath = 'assets/images/happy_pot.svg';
+  final String _potImagePath = 'assets/images/pot_normal.svg';
   final String _grassImagePath = 'assets/images/grass.svg';
 
   @override

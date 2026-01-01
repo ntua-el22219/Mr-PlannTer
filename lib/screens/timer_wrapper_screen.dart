@@ -1068,7 +1068,7 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
               left: potLeft,
               bottom: potBottom,
               child: SvgPicture.asset(
-                _potPath,
+                isStudying ? _potPath : 'assets/images/pot_normal.svg',
                 height: potHeight,
                 width: potWidth,
                 fit: BoxFit.contain,
