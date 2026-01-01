@@ -137,4 +137,14 @@ class DatabaseHelper {
     // Τα φέρνουμε με σειρά από το πιο πρόσφατο προς το παλιότερο
     return await db.query('completed_plants', orderBy: 'completion_date DESC');
   }
+
+  // Διαγραφή Task με βάση το ID
+  Future<int> deleteTask(int id) async {
+    final db = await database;
+    return await db.delete(
+      'tasks',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
 }

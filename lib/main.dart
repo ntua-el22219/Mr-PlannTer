@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
-// Εισάγουμε τον κεντρικό διαχειριστή πλοήγησης
-import 'package:app_mr_plannter/screens/main_wrapper_screen.dart'; 
-import 'data/local_storage_service.dart'; 
+import 'package:flutter/foundation.dart';
+import 'dart:io'; 
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'data/local_storage_service.dart';
+import 'screens/main_wrapper_screen.dart';
 
-// Ορίζουμε το main μία φορά και ως async για να καλέσουμε την init()
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); 
-  
-  // Αρχικοποίηση της τοπικής αποθήκευσης (Persistence)
-  await LocalStorageService().init(); 
-  
+  WidgetsFlutterBinding.ensureInitialized();
+
+  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+    // Αρχικοποίηση του Database Factory για Desktop
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
+
+
+  await LocalStorageService().init();
+
   runApp(const MyApp());
 }
 

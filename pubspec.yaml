@@ -41,14 +41,16 @@ dependencies:
   light_sensor: ^3.0.1    # Για φωτεινότητα (Sensors)
   url_launcher: ^6.1.0    # For opening URLs
   http: ^1.1.0            # For HTTP requests
-  sqflite: ^2.3.0      # <--- ΓΙΑ ΤΗ ΒΑΣΗ ΔΕΔΟΜΕΝΩΝ
+  sqflite: ^2.3.0     # For SQLite database
+  sqflite_common_ffi: ^2.3.6  # For SQLite on desktop platforms
   path: ^1.9.0
-  google_fonts: ^6.2.1    # For Figma design fonts
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  sqflite_common_ffi: ^2.3.6
+  google_fonts: ^6.1.0
+  google_generative_ai: ^0.4.7
+  flutter_dotenv: ^6.0.0
 
 dev_dependencies:
   flutter_test:
