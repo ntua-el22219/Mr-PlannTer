@@ -73,13 +73,15 @@ class _NewTaskScreenState extends State<NewTaskScreen> {
     // Έλεγχος εγκυρότητας (Validation)
     if (_formKey.currentState!.validate()) {
       try {
+        final duration = int.tryParse(_durController.text.trim()) ?? 0;
+
         final newTask = {
           'title': _titleController.text.trim(),
           'description': _descController.text.trim(),
           'type': _type,
           'is_completed': 0,
           'frequency': _type == 'task' ? _freqController.text.trim() : '',
-          'duration': int.parse(_durController.text.trim()), 
+          'duration': duration,
           'importance': _importance,
           'scheduled_date': _selectedDate.toIso8601String().split('T')[0],
           'scheduled_time': "${_selectedTime.hour.toString().padLeft(2,'0')}:${_selectedTime.minute.toString().padLeft(2,'0')}",
@@ -87,9 +89,9 @@ class _NewTaskScreenState extends State<NewTaskScreen> {
         
         // Προσπάθεια αποθήκευσης
         await DatabaseHelper().insertTask(newTask);
-        
+
         // Αν όλα πήγαν καλά, κλείσε το παράθυρο
-        if (mounted) Navigator.pop(context, true); 
+        if (mounted) Navigator.pop(context, true);
         
       } catch (e) {
         debugPrint("Database Error: $e");

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'dart:io'; 
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'data/local_storage_service.dart';
@@ -8,12 +7,11 @@ import 'screens/main_wrapper_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     // Αρχικοποίηση του Database Factory για Desktop
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
-
 
   await LocalStorageService().init();
 
