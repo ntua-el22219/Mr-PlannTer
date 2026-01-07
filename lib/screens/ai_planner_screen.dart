@@ -41,14 +41,41 @@ class _AIPlannerScreenState extends State<AIPlannerScreen> {
   }
 
   Future<void> _saveSelectedTasks() async {
+    // Ρωτάμε τον χρήστη για Ημερομηνία
+    final DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2100),
+      helpText: "SELECT START DATE",
+    );
+
+    if (pickedDate == null) return; // Αν πατήσει Cancel, δεν κάνουμε τίποτα
+
+    // Ρωτάμε τον χρήστη για Ώρα
+    final TimeOfDay? pickedTime = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 9, minute: 0),
+      helpText: "SELECT TIME",
+    );
+
+    if (pickedTime == null) return; // Αν πατήσει Cancel, σταματάμε
+
+    // Μετατροπή της ώρας σε κείμενο 
+    final String formattedTime = 
+        "${pickedTime.hour.toString().padLeft(2, '0')}:${pickedTime.minute.toString().padLeft(2, '0')}";
+    
+    // Μετατροπή ημερομηνίας σε κείμενο 
+    final String formattedDate = pickedDate.toIso8601String().split('T')[0];
+
     int count = 0;
     for (var step in _generatedSteps) {
       if (step['isSelected']) {
         final newTask = Task(
           title: step['title'],
           type: 'task',
-          scheduledDate: DateTime.now().toIso8601String().split('T')[0],
-          scheduledTime: "09:00",
+          scheduledDate: formattedDate, // Χρήση της επιλεγμένης ημερομηνίας
+          scheduledTime: formattedTime, // Χρήση της επιλεγμένης ώρας
           description: "AI Plan: ${_controller.text}",
           duration: 30,
           importance: 2,
@@ -59,7 +86,9 @@ class _AIPlannerScreenState extends State<AIPlannerScreen> {
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("$count Tasks added!")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("$count Tasks added for $formattedDate at $formattedTime!")),
+      );
       Navigator.pop(context, true);
     }
   }
@@ -104,7 +133,7 @@ class _AIPlannerScreenState extends State<AIPlannerScreen> {
                             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0D47A1)),
                           ),
                           Text(
-                            "will be added to your calendar:",
+                            "will be added to your tasks:",
                             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0D47A1)),
                           ),
                         ],

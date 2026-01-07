@@ -1,5 +1,5 @@
 class Task {
-  // Πεδία (Τα δεδομένα μας)
+  // Πεδία
   int? id;
   String title;
   String description;
@@ -10,7 +10,7 @@ class Task {
   int duration;         // σε λεπτά
   int importance;       // 1, 2, 3
 
-  // Κατασκευαστής (Πώς φτιάχνουμε ένα νέο Task)
+  // Κατασκευαστής με προεπιλεγμένες τιμές
   Task({
     this.id,
     required this.title,
@@ -29,7 +29,6 @@ class Task {
       title: map['title'],
       description: map['description'] ?? '',
       type: map['type'],
-      // Η SQLite αποθηκεύει το true/false ως 1/0. Εδώ το μετατρέπουμε πάλι.
       isCompleted: (map['is_completed'] ?? 0) == 1, 
       scheduledDate: map['scheduled_date'],
       scheduledTime: map['scheduled_time'],

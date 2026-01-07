@@ -1,12 +1,12 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
 
 class GeminiService {
-  static const String apiKey = 'AIzaSyCsWqieMWAiCyY2QkHAPiL2PmDqUALTi4A'; 
+  static const String apiKey = 'We insert our API Key here'; 
 
   Future<List<String>> generateStudyPlan(String goal) async {
     try {
       // Ρύθμιση του μοντέλου Gemini
-      final model = GenerativeModel(model: 'gemini-pro', apiKey: apiKey);
+      final model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: apiKey);
 
       // Η εντολή (Prompt) που στέλνουμε στο AI
       final prompt = '''
