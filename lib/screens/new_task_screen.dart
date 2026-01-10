@@ -4,7 +4,10 @@ import '../data/database_helper.dart';
 
 class NewTaskScreen extends StatefulWidget {
   final String initialType; // 'task' or 'deadline'
-  const NewTaskScreen({super.key, required this.initialType});
+  final DateTime? initialDate;
+  final TimeOfDay? initialTime;
+
+  const NewTaskScreen({super.key, required this.initialType, this.initialDate, this.initialTime});
 
   @override
   State<NewTaskScreen> createState() => _NewTaskScreenState();
@@ -32,6 +35,12 @@ class _NewTaskScreenState extends State<NewTaskScreen> {
   void initState() {
     super.initState();
     _type = widget.initialType;
+    if (widget.initialDate != null) {
+      _selectedDate = widget.initialDate!;
+    }
+    if (widget.initialTime != null) {
+      _selectedTime = widget.initialTime!;
+    }
     _dateController.text = "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}";
     _timeController.text = "${_selectedTime.hour.toString().padLeft(2,'0')}:${_selectedTime.minute.toString().padLeft(2,'0')}";
   }

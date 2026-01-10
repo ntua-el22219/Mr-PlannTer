@@ -4,12 +4,30 @@ import 'package:googleapis_auth/auth_io.dart' as auth;
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import '../data/local_storage_service.dart';
 
 
-const _clientId = "YOUR_GOOGLE_CLIENT_ID"; // Client ID από Google Cloud
-const _clientSecret = "YOUR_GOOGLE_CLIENT_SECRET"; // Client Secret από Google Cloud
+// Load credentials from environment variables (secure approach)
+// Create a .env file in project root with:
+// GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com
+// GOOGLE_CLIENT_SECRET=your_client_secret
+String get _clientId {
+  final id = dotenv.env['GOOGLE_CLIENT_ID'] ?? '';
+  if (id.isEmpty) {
+    debugPrint('WARNING: GOOGLE_CLIENT_ID not found in .env file');
+  }
+  return id;
+}
+
+String get _clientSecret {
+  final secret = dotenv.env['GOOGLE_CLIENT_SECRET'] ?? '';
+  if (secret.isEmpty) {
+    debugPrint('WARNING: GOOGLE_CLIENT_SECRET not found in .env file');
+  }
+  return secret;
+}
 
 // Τα απαραίτητα Scopes
 const _scopes = [gcal.CalendarApi.calendarScope];
@@ -131,15 +149,16 @@ class GoogleCalendarService {
 
 
 
-  Future<void> createCalendarEvent({
+  Future<String?> createCalendarEvent({
     required String title,
     required DateTime startTime,
     required Duration duration,
+    String? description,
   }) async {
-    if (_calendarApi == null) return;
+    if (_calendarApi == null) return null;
     
     final calendarId = await getOrCreateMrPlannTerCalendar();
-    if (calendarId == null) return;
+    if (calendarId == null) return null;
 
     final endTime = startTime.add(duration);
     
@@ -147,14 +166,68 @@ class GoogleCalendarService {
       summary: title,
       start: gcal.EventDateTime(dateTime: startTime, timeZone: 'Europe/Athens'),
       end: gcal.EventDateTime(dateTime: endTime, timeZone: 'Europe/Athens'),
-      description: 'Automatically synced from Mr PlannTer app.',
+      description: description ?? 'Automatically synced from Mr PlannTer app.',
     );
 
     try {
-      await _calendarApi!.events.insert(event, calendarId);
-      if (kDebugMode) print('Event "$title" created successfully.');
+      final createdEvent = await _calendarApi!.events.insert(event, calendarId);
+      if (kDebugMode) print('Event "$title" created successfully with ID: ${createdEvent.id}');
+      return createdEvent.id; // Return the event ID
     } catch (e) {
       if (kDebugMode) print('Failed to create event: $e');
+      return null;
     }
+  }
+
+  // Update or delete an event by ID
+  Future<bool> deleteCalendarEvent(String eventId) async {
+    if (_calendarApi == null) return false;
+    
+    final calendarId = await getOrCreateMrPlannTerCalendar();
+    if (calendarId == null) return false;
+
+    try {
+      await _calendarApi!.events.delete(calendarId, eventId);
+      if (kDebugMode) print('Event deleted successfully.');
+      return true;
+    } catch (e) {
+      if (kDebugMode) print('Failed to delete event: $e');
+      return false;
+    }
+  }
+
+  // Fetch events from Google Calendar (from primary calendar by default)
+  Future<List<gcal.Event>> fetchCalendarEvents({
+    DateTime? startDate,
+    DateTime? endDate,
+    String? calendarId,
+  }) async {
+    if (_calendarApi == null) return [];
+    
+    // Use primary calendar if no specific calendar is provided
+    final targetCalendarId = calendarId ?? 'primary';
+
+    try {
+      final events = await _calendarApi!.events.list(
+        targetCalendarId,
+        timeMin: (startDate ?? DateTime.now().subtract(Duration(days: 30))),
+        timeMax: (endDate ?? DateTime.now().add(Duration(days: 365))),
+        singleEvents: true,
+        orderBy: 'startTime',
+      );
+      
+      if (kDebugMode) print('Fetched ${events.items?.length ?? 0} events from Google Calendar ($targetCalendarId)');
+      return events.items ?? [];
+    } catch (e) {
+      if (kDebugMode) print('Failed to fetch events: $e');
+      return [];
+    }
+  }
+
+  // Sign out and clear credentials
+  Future<void> signOut() async {
+    await _localStorage.clearGoogleCredentials();
+    await _localStorage.setCalendarId('');
+    _calendarApi = null;
   }
 }

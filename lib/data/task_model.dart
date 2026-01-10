@@ -9,6 +9,8 @@ class Task {
   String scheduledTime; // π.χ. "10:30"
   int duration;         // σε λεπτά
   int importance;       // 1, 2, 3
+  String? googleEventId; // Google Calendar event ID
+  int? colorValue;      // Color as int (0xFFRRGGBB)
 
   // Κατασκευαστής με προεπιλεγμένες τιμές
   Task({
@@ -21,6 +23,8 @@ class Task {
     required this.scheduledTime,
     this.duration = 30,
     this.importance = 1,
+    this.googleEventId,
+    this.colorValue,
   });
 
   factory Task.fromMap(Map<String, dynamic> map) {
@@ -34,6 +38,8 @@ class Task {
       scheduledTime: map['scheduled_time'],
       duration: map['duration'] ?? 30,
       importance: map['importance'] ?? 1,
+      googleEventId: map['google_event_id'],
+      colorValue: map['color_value'],
     );
   }
 
@@ -50,6 +56,8 @@ class Task {
       'scheduled_time': scheduledTime,
       'duration': duration,
       'importance': importance,
+      'google_event_id': googleEventId,
+      'color_value': colorValue,
     };
   }
 }
