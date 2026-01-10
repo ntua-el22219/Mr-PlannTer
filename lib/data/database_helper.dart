@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -21,10 +22,27 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2, 
+      version: 3, 
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
+      onOpen: _onOpen,
     );
+  }
+
+  Future<void> _onOpen(Database db) async {
+    // Check if color_value column exists, if not add it
+    try {
+      final result = await db.rawQuery("PRAGMA table_info(tasks)");
+      final hasColorColumn = result.any((col) => col['name'] == 'color_value');
+      
+      if (!hasColorColumn) {
+        debugPrint('Adding color_value column...');
+        await db.execute('ALTER TABLE tasks ADD COLUMN color_value INTEGER');
+        debugPrint('color_value column added successfully');
+      }
+    } catch (e) {
+      debugPrint('Error checking/adding color_value column: $e');
+    }
   }
 
   void _onCreate(Database db, int version) async {
@@ -41,7 +59,8 @@ class DatabaseHelper {
         importance INTEGER, 
         scheduled_date TEXT, 
         scheduled_time TEXT, 
-        google_event_id TEXT
+        google_event_id TEXT,
+        color_value INTEGER
       )
     ''');
     
@@ -79,6 +98,16 @@ class DatabaseHelper {
         )
       ''');
     }
+    
+    // Add color_value column if it doesn't exist
+    if (oldVersion < 3) {
+      try {
+        await db.execute('ALTER TABLE tasks ADD COLUMN color_value INTEGER');
+      } catch (e) {
+        // Column might already exist
+        debugPrint('Column might already exist: $e');
+      }
+    }
   }
 
 
@@ -100,6 +129,46 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+
+  // Update Google Calendar Event ID for a task
+  Future<int> updateTaskGoogleEventId(int id, String googleEventId) async {
+    final db = await database;
+    return await db.update(
+      'tasks',
+      {'google_event_id': googleEventId},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // Get all tasks that haven't been synced to Google Calendar
+  Future<List<Map<String, dynamic>>> getUnsyncedTasks() async {
+    final db = await database;
+    return await db.query(
+      'tasks',
+      where: 'google_event_id IS NULL OR google_event_id = ?',
+      whereArgs: [''],
+      orderBy: 'scheduled_date ASC',
+    );
+  }
+
+  // Update task color
+  Future<int> updateTaskColor(int id, int? colorValue) async {
+    final db = await database;
+    try {
+      final result = await db.update(
+        'tasks',
+        {'color_value': colorValue},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      debugPrint('Task color updated: $result rows affected');
+      return result;
+    } catch (e) {
+      debugPrint('Error updating task color: $e');
+      rethrow;
+    }
   }
 
   Future<int> updatePlantState(int newStage, int totalStudyMinutes) async {
@@ -136,6 +205,29 @@ class DatabaseHelper {
     final db = await database;
     // Τα φέρνουμε με σειρά από το πιο πρόσφατο προς το παλιότερο
     return await db.query('completed_plants', orderBy: 'completion_date DESC');
+  }
+
+  // Check if task exists with similar title and datetime
+  Future<Map<String, dynamic>?> findSimilarTask({
+    required String title,
+    required String scheduledDate,
+    String? scheduledTime,
+  }) async {
+    final db = await database;
+    final List<Map<String, dynamic>> results = await db.query(
+      'tasks',
+      where: 'LOWER(title) = ? AND scheduled_date = ?',
+      whereArgs: [title.toLowerCase(), scheduledDate],
+    );
+    
+    // If time is specified, check for exact match
+    if (scheduledTime != null && scheduledTime.isNotEmpty) {
+      final exactMatch = results.where((task) => task['scheduled_time'] == scheduledTime).toList();
+      return exactMatch.isNotEmpty ? exactMatch.first : null;
+    }
+    
+    // Return first match if no time specified
+    return results.isNotEmpty ? results.first : null;
   }
 
   // Διαγραφή Task με βάση το ID
