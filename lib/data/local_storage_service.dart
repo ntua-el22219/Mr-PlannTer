@@ -47,10 +47,26 @@ class LocalStorageService {
   }
 
   // Song Selection
-  String? getSelectedSong() => _prefs.getString('selectedSong');
+  String? getSelectedSong() => _prefs.getString('selectedSong') ?? 'No song';
 
   Future<void> setSelectedSong(String song) async {
     await _prefs.setString('selectedSong', song);
+  }
+
+  // Imported Song Path
+  String? getImportedSongPath() => _prefs.getString('importedSongPath');
+
+  Future<void> setImportedSongPath(String path) async {
+    await _prefs.setString('importedSongPath', path);
+  }
+
+  Future<void> clearImportedSong() async {
+    await _prefs.remove('importedSongPath');
+    // Reset selected song to default if it was the imported song
+    final selected = _prefs.getString('selectedSong');
+    if (selected != null && !['No song', 'Lo-fi Beats', 'Classical Focus', 'Ambient Calm', 'Rain Sounds', 'Nature Sounds'].contains(selected)) {
+      await _prefs.setString('selectedSong', 'Choose a song');
+    }
   }
 
   // Connected Device 
@@ -65,6 +81,13 @@ class LocalStorageService {
 
   Future<void> setSoundEnabled(bool value) async {
     await _prefs.setBool('soundEnabled', value);
+  }
+
+  // Sound Effects Enabled (Timer sound effects)
+  bool get isSoundEffectsEnabled => _prefs.getBool('soundEffectsEnabled') ?? true;
+
+  Future<void> setSoundEffectsEnabled(bool value) async {
+    await _prefs.setBool('soundEffectsEnabled', value);
   }
 
   Future<void> clearGoogleCredentials() async {
