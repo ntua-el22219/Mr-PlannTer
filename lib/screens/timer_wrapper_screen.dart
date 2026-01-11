@@ -9,6 +9,8 @@ import '../services/audio_service.dart';
 import '../widgets/cloudy_background.dart';
 import '../theme/text_styles.dart';
 
+import 'settings_screen.dart';
+
 // Καταστάσεις του Timer
 enum TimerPhase { setup, studying, breaking }
 
@@ -1003,10 +1005,18 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
             Positioned(
               left: settingsLeft,
               top: settingsTop,
-              child: SizedBox(
-                width: settingsSize,
-                height: settingsSize,
-                child: const Icon(Icons.settings, size: 40),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => SettingsScreen()),
+                  );
+                },
+                child: SizedBox(
+                  width: settingsSize,
+                  height: settingsSize,
+                  child: const Icon(Icons.settings, size: 40),
+                ),
               ),
             ),
 
