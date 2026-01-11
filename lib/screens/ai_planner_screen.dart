@@ -20,24 +20,104 @@ class _AIPlannerScreenState extends State<AIPlannerScreen> {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
-    FocusScope.of(context).unfocus();
+    FocusScope.of(context).unfocus(); // Κλείνει το πληκτρολόγιο
 
     setState(() {
       _isGenerating = true;
-      _generatedSteps = [];
+      _generatedSteps = []; // Καθαρίζουμε τη λίστα
     });
 
-    final steps = await GeminiService().generateStudyPlan(text);
+    try {
+      // Προσπαθούμε να πάρουμε τα αποτελέσματα
+      final steps = await GeminiService().generateStudyPlan(text);
 
-    if (mounted) {
-      setState(() {
-        _generatedSteps = steps.map((step) => {
-          'title': step,
-          'isSelected': true
-        }).toList();
-        _isGenerating = false;
-      });
+      if (mounted) {
+        setState(() {
+          _generatedSteps = steps.map((step) => {
+            'title': step,
+            'isSelected': true
+          }).toList();
+          _isGenerating = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isGenerating = false; // Σταματάμε το loading
+        });
+        
+        // Εμφανίζουμε το Popup
+        _showErrorDialog("Oops! Something went wrong.\n\nDetails: $e");
+      }
     }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Ο χρήστης πρέπει να πατήσει το κουμπί για να κλείσει
+      builder: (ctx) => AlertDialog(
+        // Σχήμα με στρογγυλεμένες γωνίες
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white, // Αποφυγή μωβ απόχρωσης στο Material 3
+        
+        // Τίτλος με Εικονίδιο και Χρώμα
+        title: Column(
+          children: [
+            Icon(
+              Icons.error_outline_rounded,
+              size: 60,
+              color: Colors.redAccent.shade200, // Απαλό κόκκινο
+            ),
+            const SizedBox(height: 10),
+            Text(
+              "Something went wrong",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.red.shade900,
+                fontWeight: FontWeight.bold,
+                fontSize: 22,
+              ),
+            ),
+          ],
+        ),
+
+        // Το κυρίως μήνυμα
+        content: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 16, color: Colors.black54),
+        ),
+
+        // Το κουμπί από κάτω
+        actions: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent, // Κόκκινο φόντο
+                  foregroundColor: Colors.white, // Άσπρα γράμματα
+                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30), // Οβάλ κουμπί
+                  ),
+                  elevation: 5, // Σκιά για βάθος
+                ),
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                },
+                child: const Text(
+                  "OK",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _saveSelectedTasks() async {

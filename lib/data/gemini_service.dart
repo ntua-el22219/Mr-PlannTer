@@ -1,13 +1,14 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class GeminiService {
-  static const String apiKey = 'We insert our API Key here'; 
+  static String? apiKey = dotenv.env['GEMINI_API_KEY'];
 
   Future<List<String>> generateStudyPlan(String goal) async {
     try {
       // Ρύθμιση του μοντέλου Gemini
-      final model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: apiKey);
-
+      final model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: apiKey ?? '');
+ 
       // Η εντολή (Prompt) που στέλνουμε στο AI
       final prompt = '''
         You are a helpful study assistant app.
@@ -22,19 +23,13 @@ class GeminiService {
       final response = await model.generateContent(content);
 
       if (response.text != null && response.text!.isNotEmpty) {
-        // Χωρίζουμε την απάντηση με βάση το σύμβολο |
         return response.text!.split('|').map((e) => e.trim()).toList();
       } else {
-        return ["Could not generate plan. Try again."];
+        throw Exception("Could not generate plan. Empty response.");
       }
     } catch (e) {
       print("Gemini Error: $e");
-      return [
-         "Error: $e",
-        "Check internet connection",
-        "Verify API Key",
-        "Try again later"
-      ];
+      throw Exception(e.toString()); 
     }
   }
 }
