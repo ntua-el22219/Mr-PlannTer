@@ -4,8 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
 import '../data/database_helper.dart'; // Για αποθήκευση στο τέλος
+import '../data/local_storage_service.dart';
+import '../services/audio_service.dart';
 import '../widgets/cloudy_background.dart';
 import '../theme/text_styles.dart';
+
+import 'settings_screen.dart';
 
 // Καταστάσεις του Timer
 enum TimerPhase { setup, studying, breaking }
@@ -55,6 +59,10 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
   // Button press states
   bool _isCancelPressed = false;
   bool _isPlayPressed = false;
+
+  // Audio Service
+  late AudioService _audioService;
+  late LocalStorageService _storageService;
 
   // Gamification State 
   int _currentPlantState = 0; // 0 έως 6
@@ -108,8 +116,12 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
   ];
 
   @override
+  @override
   void initState() {
     super.initState();
+    _audioService = AudioService();
+    _storageService = LocalStorageService();
+    
     // Background Animation (ίδιο με Main Page)
     _cloudController = AnimationController(
       vsync: this,
@@ -213,6 +225,11 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
       _secondsPerGrowthStage = totalStudyTime / 6;
     });
 
+    // Play study time start sound for first session
+    if (_storageService.isSoundEffectsEnabled) {
+      _audioService.playStudyTimeStart();
+    }
+
     _startTicker();
   }
 
@@ -243,11 +260,19 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
   void _handlePhaseEnd() async {
     _timer?.cancel();
     
+    // Check if sound effects are enabled
+    final soundEffectsEnabled = _storageService.isSoundEffectsEnabled;
+    
     // ΤΕΛΟΣ ΔΙΑΒΑΣΜΑΤΟΣ
     if (_phase == TimerPhase.studying) {
       
       // Αν υπάρχουν κι άλλα sessions 
       if (_currentSession < _totalSessions) {
+        // Play break time start sound
+        if (soundEffectsEnabled) {
+          await _audioService.playBreakTimeStart();
+        }
+        
         setState(() {
           _phase = TimerPhase.breaking; // ΑΛΛΑΓΗ ΦΑΣΗΣ ΣΕ ΔΙΑΛΕΙΜΜΑ
           _secondsRemaining = _breakTimeTotalSeconds; // ΧΡΟΝΟΣ ΔΙΑΛΕΙΜΜΑΤΟΣ (με seconds)
@@ -256,6 +281,11 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
       } 
       // Αν ήταν το τελευταίο session
       else {
+        // Play end of sessions sound
+        if (soundEffectsEnabled) {
+          await _audioService.playEndOfSessions();
+        }
+        
         // Προσπάθεια αποθήκευσης στη βάση (με error handling)
         try {
           final db = DatabaseHelper();
@@ -334,6 +364,11 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
     } 
     // ΤΕΛΟΣ ΔΙΑΛΕΙΜΜΑΤΟΣ (BREAKING)
     else if (_phase == TimerPhase.breaking) {
+      // Play study time start sound for next session
+      if (soundEffectsEnabled) {
+        await _audioService.playStudyTimeStart();
+      }
+      
       // Τέλος Διαλείμματος -> Πάμε στο επόμενο session διαβάσματος
       setState(() {
         _currentSession++; // Αυξάνουμε τον αριθμό του session
@@ -970,10 +1005,18 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
             Positioned(
               left: settingsLeft,
               top: settingsTop,
-              child: SizedBox(
-                width: settingsSize,
-                height: settingsSize,
-                child: const Icon(Icons.settings, size: 40),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => SettingsScreen()),
+                  );
+                },
+                child: SizedBox(
+                  width: settingsSize,
+                  height: settingsSize,
+                  child: const Icon(Icons.settings, size: 40),
+                ),
               ),
             ),
 
