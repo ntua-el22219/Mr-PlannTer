@@ -39,11 +39,7 @@ class CloudyBackground extends StatelessWidget {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               stops: [0.0, 0.35, 1.0],
-              colors: [
-                Color(0x55FFFFFF),
-                Color(0x00FFFFFF),
-                Color(0x00000000),
-              ],
+              colors: [Color(0x55FFFFFF), Color(0x00FFFFFF), Color(0x00000000)],
             ),
           ),
         ),
@@ -81,10 +77,12 @@ class CloudyAnimatedBackground extends StatefulWidget {
   final Widget child;
 
   @override
-  State<CloudyAnimatedBackground> createState() => _CloudyAnimatedBackgroundState();
+  State<CloudyAnimatedBackground> createState() =>
+      _CloudyAnimatedBackgroundState();
 }
 
-class _CloudyAnimatedBackgroundState extends State<CloudyAnimatedBackground> with SingleTickerProviderStateMixin {
+class _CloudyAnimatedBackgroundState extends State<CloudyAnimatedBackground>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(seconds: 8),

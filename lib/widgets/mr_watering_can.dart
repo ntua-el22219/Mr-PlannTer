@@ -2,12 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:ui';
 
-enum WateringCanVariant {
-  defaultMode,
-  beggingToTap,
-  pulsing,
-  pauseMode,
-}
+enum WateringCanVariant { defaultMode, beggingToTap, pulsing, pauseMode }
 
 class MrWateringCan extends StatelessWidget {
   final WateringCanVariant variant;
@@ -74,11 +69,7 @@ class MrWateringCan extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      child: SizedBox(
-        width: width,
-        height: height,
-        child: content,
-      ),
+      child: SizedBox(width: width, height: height, child: content),
     );
   }
 }

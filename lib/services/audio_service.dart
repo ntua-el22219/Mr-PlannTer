@@ -19,7 +19,10 @@ class AudioService {
     _soundEffectPlayer = AudioPlayer();
     // Set up listener to replay when song completes
     _audioPlayer.onPlayerComplete.listen((_) {
-      if (_currentSongPath != null && _currentSongPath!.isNotEmpty && _currentSong != null && _currentSong != 'No song') {
+      if (_currentSongPath != null &&
+          _currentSongPath!.isNotEmpty &&
+          _currentSong != null &&
+          _currentSong != 'No song') {
         _replaySong();
       }
     });
@@ -31,7 +34,9 @@ class AudioService {
       await _audioPlayer.stop();
 
       // Check if it's an imported song (has file path with extension)
-      if (songName.contains('.mp3') || songName.contains('.m4a') || songName.contains('.wav')) {
+      if (songName.contains('.mp3') ||
+          songName.contains('.m4a') ||
+          songName.contains('.wav')) {
         // It's an imported song, load from file path
         _currentSongPath = songName;
         _currentSong = songName;
@@ -61,7 +66,9 @@ class AudioService {
   Future<void> _replaySong() async {
     // Looping is now handled by ReleaseMode.loop, so this method is no longer needed
     // but kept for backward compatibility
-    if (_currentSongPath != null && _currentSongPath!.isNotEmpty && _currentSong != 'No song') {
+    if (_currentSongPath != null &&
+        _currentSongPath!.isNotEmpty &&
+        _currentSong != 'No song') {
       print('Song should be looping with ReleaseMode.loop');
     }
   }
@@ -79,15 +86,18 @@ class AudioService {
   // Fade out music volume
   Future<void> _fadeOutMusic() async {
     _volumeFadeTimer?.cancel();
-    
+
     try {
       double currentVolume = _originalMusicVolume;
       const int fadeSteps = 15; // Number of steps for smooth fade
-      const int fadeInterval = 50; // Milliseconds between each step (50ms * 15 = 750ms total)
+      const int fadeInterval =
+          50; // Milliseconds between each step (50ms * 15 = 750ms total)
       final double stepDecrement = currentVolume / fadeSteps;
-      
+
       int stepCount = 0;
-      _volumeFadeTimer = Timer.periodic(Duration(milliseconds: fadeInterval), (timer) {
+      _volumeFadeTimer = Timer.periodic(Duration(milliseconds: fadeInterval), (
+        timer,
+      ) {
         if (stepCount < fadeSteps) {
           currentVolume -= stepDecrement;
           if (currentVolume < 0) currentVolume = 0;
@@ -106,18 +116,21 @@ class AudioService {
   // Fade in music volume
   Future<void> _fadeInMusic() async {
     _volumeFadeTimer?.cancel();
-    
+
     try {
       double currentVolume = 0.0;
       const int fadeSteps = 15; // Number of steps for smooth fade
       const int fadeInterval = 50; // Milliseconds between each step
       final double stepIncrement = _originalMusicVolume / fadeSteps;
-      
+
       int stepCount = 0;
-      _volumeFadeTimer = Timer.periodic(Duration(milliseconds: fadeInterval), (timer) {
+      _volumeFadeTimer = Timer.periodic(Duration(milliseconds: fadeInterval), (
+        timer,
+      ) {
         if (stepCount < fadeSteps) {
           currentVolume += stepIncrement;
-          if (currentVolume > _originalMusicVolume) currentVolume = _originalMusicVolume;
+          if (currentVolume > _originalMusicVolume)
+            currentVolume = _originalMusicVolume;
           _audioPlayer.setVolume(currentVolume);
           stepCount++;
         } else {

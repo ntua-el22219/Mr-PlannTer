@@ -9,9 +9,10 @@ class AppTextStyles {
   static const Color grey = Color(0xFFD9D9D9);
 
   // Text Styles - Using ADLaM Display from Google Fonts
-  
+
   /// Big title: ADLaM Display 60px
-  static TextStyle get bigTitle => GoogleFonts.getFont('ADLaM Display',
+  static TextStyle get bigTitle => GoogleFonts.getFont(
+    'ADLaM Display',
     fontSize: 60,
     fontWeight: FontWeight.w400,
     height: 1.0,
@@ -20,7 +21,8 @@ class AppTextStyles {
   );
 
   /// Title in element: ADLaM Display 36px
-  static TextStyle get titleInElement => GoogleFonts.getFont('ADLaM Display',
+  static TextStyle get titleInElement => GoogleFonts.getFont(
+    'ADLaM Display',
     fontSize: 36,
     fontWeight: FontWeight.w400,
     height: 1.0,
@@ -29,7 +31,8 @@ class AppTextStyles {
   );
 
   /// Task deadline: ADLaM Display 29.26px
-  static TextStyle get taskDeadline => GoogleFonts.getFont('ADLaM Display',
+  static TextStyle get taskDeadline => GoogleFonts.getFont(
+    'ADLaM Display',
     fontSize: 29.26,
     fontWeight: FontWeight.w400,
     height: 1.0,
@@ -38,7 +41,8 @@ class AppTextStyles {
   );
 
   /// Components 4: ADLaM Display 25px
-  static TextStyle get components4 => GoogleFonts.getFont('ADLaM Display',
+  static TextStyle get components4 => GoogleFonts.getFont(
+    'ADLaM Display',
     fontSize: 25,
     fontWeight: FontWeight.w400,
     height: 1.0,
@@ -47,7 +51,8 @@ class AppTextStyles {
   );
 
   /// Settings header: ADLaM Display 23px
-  static TextStyle get settingsHeader => GoogleFonts.getFont('ADLaM Display',
+  static TextStyle get settingsHeader => GoogleFonts.getFont(
+    'ADLaM Display',
     fontSize: 23,
     fontWeight: FontWeight.w400,
     height: 1.0,
@@ -56,7 +61,8 @@ class AppTextStyles {
   );
 
   /// Heading 2: ADLaM Display 20px
-  static TextStyle get heading2 => GoogleFonts.getFont('ADLaM Display',
+  static TextStyle get heading2 => GoogleFonts.getFont(
+    'ADLaM Display',
     fontSize: 20,
     fontWeight: FontWeight.w400,
     height: 1.0,
@@ -65,7 +71,8 @@ class AppTextStyles {
   );
 
   /// Footer in element: ADLaM Display 16px
-  static TextStyle get footerInElement => GoogleFonts.getFont('ADLaM Display',
+  static TextStyle get footerInElement => GoogleFonts.getFont(
+    'ADLaM Display',
     fontSize: 16,
     fontWeight: FontWeight.w400,
     height: 1.0,
@@ -74,7 +81,8 @@ class AppTextStyles {
   );
 
   /// Task hour: ADLaM Display 14px
-  static TextStyle get taskHour => GoogleFonts.getFont('ADLaM Display',
+  static TextStyle get taskHour => GoogleFonts.getFont(
+    'ADLaM Display',
     fontSize: 14,
     fontWeight: FontWeight.w400,
     height: 1.0,
@@ -83,7 +91,8 @@ class AppTextStyles {
   );
 
   /// Component 6: ADLaM Display 12.8px with line height 19.2
-  static TextStyle get component6 => GoogleFonts.getFont('ADLaM Display',
+  static TextStyle get component6 => GoogleFonts.getFont(
+    'ADLaM Display',
     fontSize: 12.8,
     fontWeight: FontWeight.w400,
     height: 1.5, // 19.2 / 12.8 = 1.5

@@ -39,7 +39,10 @@ class AayBottomNavigationBar extends StatelessWidget {
     this.backgroundColor,
     this.selectedColor,
     this.unselectedColor,
-  }) : assert(items.length >= 2, 'AayBottomNavigationBar requires at least 2 items');
+  }) : assert(
+         items.length >= 2,
+         'AayBottomNavigationBar requires at least 2 items',
+       );
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +73,11 @@ class AayBottomNavigationBar extends StatelessWidget {
             color: bg,
             borderRadius: BorderRadius.circular(100),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 4)),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
             ],
           ),
           child: Row(
@@ -91,17 +98,37 @@ class AayBottomNavigationBar extends StatelessWidget {
                 width: circleSize,
                 height: circleSize,
                 decoration: BoxDecoration(
-                  color: selected ? (effectiveVariant == AayNavVariant.outline ? Colors.transparent : selColor) : Colors.transparent,
+                  color: selected
+                      ? (effectiveVariant == AayNavVariant.outline
+                            ? Colors.transparent
+                            : selColor)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(circleSize / 2),
                   border: selected
-                      ? (effectiveVariant == AayNavVariant.outline ? Border.all(color: selColor, width: 2) : null)
+                      ? (effectiveVariant == AayNavVariant.outline
+                            ? Border.all(color: selColor, width: 2)
+                            : null)
                       : Border.all(color: unsel.withOpacity(0.35)),
                   boxShadow: isCenter && selected
-                      ? [BoxShadow(color: selColor.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 6))]
+                      ? [
+                          BoxShadow(
+                            color: selColor.withOpacity(0.25),
+                            blurRadius: 10,
+                            offset: const Offset(0, 6),
+                          ),
+                        ]
                       : null,
                 ),
                 alignment: Alignment.center,
-                child: Icon(item.icon, size: iconSize, color: selected ? (effectiveVariant == AayNavVariant.outline ? selColor : Colors.white) : unsel),
+                child: Icon(
+                  item.icon,
+                  size: iconSize,
+                  color: selected
+                      ? (effectiveVariant == AayNavVariant.outline
+                            ? selColor
+                            : Colors.white)
+                      : unsel,
+                ),
               );
 
               final widget = Column(
@@ -109,7 +136,10 @@ class AayBottomNavigationBar extends StatelessWidget {
                 children: [
                   // Elevate center item slightly
                   if (isCenter)
-                    Transform.translate(offset: const Offset(0, -10), child: iconContainer)
+                    Transform.translate(
+                      offset: const Offset(0, -10),
+                      child: iconContainer,
+                    )
                   else
                     iconContainer,
                   const SizedBox(height: 6),
@@ -117,7 +147,13 @@ class AayBottomNavigationBar extends StatelessWidget {
                     duration: const Duration(milliseconds: 200),
                     style: TextStyle(
                       fontSize: 12,
-                      color: selected ? (effectiveVariant == AayNavVariant.primary ? selColor : (effectiveVariant == AayNavVariant.secondary ? Colors.white : selColor)) : unsel,
+                      color: selected
+                          ? (effectiveVariant == AayNavVariant.primary
+                                ? selColor
+                                : (effectiveVariant == AayNavVariant.secondary
+                                      ? Colors.white
+                                      : selColor))
+                          : unsel,
                       fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                     ),
                     child: Text(item.label, overflow: TextOverflow.ellipsis),
@@ -132,7 +168,10 @@ class AayBottomNavigationBar extends StatelessWidget {
                     onTap: item.isDisabled ? null : () => onTap(i),
                     borderRadius: BorderRadius.circular(20),
                     child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: isCenter ? 6 : 8, vertical: 4),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isCenter ? 6 : 8,
+                        vertical: 4,
+                      ),
                       child: widget,
                     ),
                   ),

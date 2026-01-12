@@ -15,8 +15,8 @@ class _PlantsAlbumScreenState extends State<PlantsAlbumScreen> {
   // Λίστα με τα φυτά που έχουν αποθηκευτεί
   List<Map<String, dynamic>> _completedPlants = [];
   bool _isLoading = true;
-  
-  // Page Controller για τις τελείες 
+
+  // Page Controller για τις τελείες
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
@@ -38,8 +38,8 @@ class _PlantsAlbumScreenState extends State<PlantsAlbumScreen> {
   Widget build(BuildContext context) {
     // Υπολογισμός σελίδων (6 φυτά ανά σελίδα)
     final int itemsPerPage = 6;
-    final int totalPages = (_completedPlants.isEmpty) 
-        ? 1 
+    final int totalPages = (_completedPlants.isEmpty)
+        ? 1
         : (_completedPlants.length / itemsPerPage).ceil();
 
     return Scaffold(
@@ -49,7 +49,7 @@ class _PlantsAlbumScreenState extends State<PlantsAlbumScreen> {
           children: [
             // Close Button (X)
             Positioned(
-              top: 80, 
+              top: 80,
               child: GestureDetector(
                 onTap: () => Navigator.pop(context),
                 child: Container(
@@ -68,17 +68,20 @@ class _PlantsAlbumScreenState extends State<PlantsAlbumScreen> {
               top: 150,
               bottom: 100,
               child: Container(
-                width: 320, 
-                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 15),
+                width: 320,
+                padding: const EdgeInsets.symmetric(
+                  vertical: 20,
+                  horizontal: 15,
+                ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFD54F), 
+                  color: const Color(0xFFFFD54F),
                   borderRadius: BorderRadius.circular(15),
                   border: Border.all(color: Colors.black, width: 1.5),
                 ),
                 child: Column(
                   children: [
                     Expanded(
-                      child: _isLoading 
+                      child: _isLoading
                           ? const Center(child: CircularProgressIndicator())
                           : PageView.builder(
                               controller: _pageController,
@@ -91,22 +94,26 @@ class _PlantsAlbumScreenState extends State<PlantsAlbumScreen> {
                               itemBuilder: (context, pageIndex) {
                                 // Υπολογισμός ποια φυτά ανήκουν σε αυτή τη σελίδα
                                 final startIndex = pageIndex * itemsPerPage;
-                                final endIndex = (startIndex + itemsPerPage < _completedPlants.length) 
-                                    ? startIndex + itemsPerPage 
+                                final endIndex =
+                                    (startIndex + itemsPerPage <
+                                        _completedPlants.length)
+                                    ? startIndex + itemsPerPage
                                     : _completedPlants.length;
-                                
+
                                 final pagePlants = _completedPlants.sublist(
-                                  startIndex < _completedPlants.length ? startIndex : 0, 
-                                  endIndex > startIndex ? endIndex : startIndex
+                                  startIndex < _completedPlants.length
+                                      ? startIndex
+                                      : 0,
+                                  endIndex > startIndex ? endIndex : startIndex,
                                 );
 
                                 return _buildGridPage(pagePlants, itemsPerPage);
                               },
                             ),
                     ),
-                    
+
                     const SizedBox(height: 10),
-                    
+
                     // Pagination Dots
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -117,9 +124,9 @@ class _PlantsAlbumScreenState extends State<PlantsAlbumScreen> {
                           height: 12,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: _currentPage == index 
-                                ? const Color(0xFF8D6E63) 
-                                : Colors.grey.shade600, 
+                            color: _currentPage == index
+                                ? const Color(0xFF8D6E63)
+                                : Colors.grey.shade600,
                           ),
                         );
                       }),
@@ -134,22 +141,26 @@ class _PlantsAlbumScreenState extends State<PlantsAlbumScreen> {
     );
   }
 
-  // Grid Builder 
+  // Grid Builder
   Widget _buildGridPage(List<Map<String, dynamic>> plants, int totalSlots) {
     return GridView.builder(
-      physics: const NeverScrollableScrollPhysics(), // Απενεργοποίηση scroll μέσα στο page view
+      physics:
+          const NeverScrollableScrollPhysics(), // Απενεργοποίηση scroll μέσα στο page view
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2, // 2 Στήλες
         crossAxisSpacing: 15,
         mainAxisSpacing: 15,
-        childAspectRatio: 0.85, 
+        childAspectRatio: 0.85,
       ),
-      itemCount: totalSlots, // Πάντα σχεδιάζουμε 6 κουτιά 
+      itemCount: totalSlots, // Πάντα σχεδιάζουμε 6 κουτιά
       itemBuilder: (context, index) {
         if (index < plants.length) {
           // Έχουμε φυτό
           final plant = plants[index];
-          return _buildPlantItem(plant['plant_name'], plant['plant_image_path']);
+          return _buildPlantItem(
+            plant['plant_name'],
+            plant['plant_image_path'],
+          );
         } else {
           // Κενό κουτί (Placeholder)
           return _buildEmptyItem();
@@ -170,18 +181,22 @@ class _PlantsAlbumScreenState extends State<PlantsAlbumScreen> {
             ),
             padding: const EdgeInsets.all(10),
             child: SvgPicture.asset(
-              imagePath, 
+              imagePath,
               fit: BoxFit.contain,
               // Fallback αν δεν υπάρχει εικόνα στη βάση
-              placeholderBuilder: (c) => const Icon(Icons.local_florist, color: Colors.grey),
+              placeholderBuilder: (c) =>
+                  const Icon(Icons.local_florist, color: Colors.grey),
             ),
           ),
         ),
         const SizedBox(height: 5),
         // Name Label
         Text(
-          name, 
-          style: AppTextStyles.plantStyle.copyWith(fontSize: 12, fontWeight: FontWeight.bold),
+          name,
+          style: AppTextStyles.plantStyle.copyWith(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
           overflow: TextOverflow.ellipsis,
         ),
       ],
@@ -202,7 +217,13 @@ class _PlantsAlbumScreenState extends State<PlantsAlbumScreen> {
             child: CustomPaint(
               painter: DiagonalLinePainter(),
               child: Center(
-                child: Text('Empty', style: AppTextStyles.caption.copyWith(color: Colors.grey, fontSize: 10)),
+                child: Text(
+                  'Empty',
+                  style: AppTextStyles.caption.copyWith(
+                    color: Colors.grey,
+                    fontSize: 10,
+                  ),
+                ),
               ),
             ),
           ),
@@ -215,14 +236,14 @@ class _PlantsAlbumScreenState extends State<PlantsAlbumScreen> {
   }
 }
 
-// Custom Painter για τη διαγώνια γραμμή στα κενά κουτιά 
+// Custom Painter για τη διαγώνια γραμμή στα κενά κουτιά
 class DiagonalLinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = Colors.grey.shade500
       ..strokeWidth = 1;
-    
+
     canvas.drawLine(Offset(0, size.height), Offset(size.width, 0), paint);
   }
 

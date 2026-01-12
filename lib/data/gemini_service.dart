@@ -6,11 +6,15 @@ class GeminiService {
 
   Future<List<String>> generateStudyPlan(String goal) async {
     try {
-      // Ρύθμιση του μοντέλου Gemini
-      final model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: apiKey ?? '');
- 
-      // Η εντολή (Prompt) που στέλνουμε στο AI
-      final prompt = '''
+      // Setup Gemini model
+      final model = GenerativeModel(
+        model: 'gemini-2.5-flash',
+        apiKey: apiKey ?? '',
+      );
+
+      // Prompt for study plan generation
+      final prompt =
+          '''
         You are a helpful study assistant app.
         The user wants to achieve this goal: "$goal".
         Create a list of 5 specific, actionable study tasks.
@@ -25,11 +29,37 @@ class GeminiService {
       if (response.text != null && response.text!.isNotEmpty) {
         return response.text!.split('|').map((e) => e.trim()).toList();
       } else {
-        throw Exception("Could not generate plan. Empty response.");
+        throw Exception("Could not generate study plan. Empty response.");
       }
     } catch (e) {
-      print("Gemini Error: $e");
-      throw Exception(e.toString()); 
+      print("Gemini Study Plan Error: $e");
+      throw Exception(e.toString());
+    }
+  }
+
+  Future<List<String>> generateScheduleSuggestions(String prompt) async {
+    try {
+      final model = GenerativeModel(
+        model: 'gemini-2.5-flash',
+        apiKey: apiKey ?? '',
+      );
+      final content = [Content.text(prompt)];
+      final response = await model.generateContent(content);
+
+      if (response.text != null && response.text!.isNotEmpty) {
+        return response.text!
+            .split('\n')
+            .where((line) => line.trim().isNotEmpty && line.contains('|'))
+            .map((line) => line.trim())
+            .toList();
+      } else {
+        throw Exception(
+          "Could not generate schedule suggestions. Empty response.",
+        );
+      }
+    } catch (e) {
+      print("Gemini Schedule Error: $e");
+      throw Exception(e.toString());
     }
   }
 }
