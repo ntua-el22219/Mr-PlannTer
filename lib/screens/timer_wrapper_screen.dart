@@ -20,34 +20,59 @@ class TimerWrapperScreen extends StatefulWidget {
   @override
   State<TimerWrapperScreen> createState() => _TimerWrapperScreenState();
 }
+
 class _PlantLayout {
   final double width;
   final double height;
   final double left;
   final double bottom;
-  const _PlantLayout({required this.width, required this.height, required this.left, required this.bottom});
+  const _PlantLayout({
+    required this.width,
+    required this.height,
+    required this.left,
+    required this.bottom,
+  });
 }
 
-class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProviderStateMixin {
+class _TimerWrapperScreenState extends State<TimerWrapperScreen>
+    with TickerProviderStateMixin {
   // Individual digit controllers for studying time (MM:SS)
-  final TextEditingController _studyMin1Controller = TextEditingController(text: '2');
-  final TextEditingController _studyMin2Controller = TextEditingController(text: '5');
-  final TextEditingController _studySec1Controller = TextEditingController(text: '0');
-  final TextEditingController _studySec2Controller = TextEditingController(text: '0');
-  
-  // Individual digit controllers for break time (MM:SS)
-  final TextEditingController _breakMin1Controller = TextEditingController(text: '0');
-  final TextEditingController _breakMin2Controller = TextEditingController(text: '5');
-  final TextEditingController _breakSec1Controller = TextEditingController(text: '0');
-  final TextEditingController _breakSec2Controller = TextEditingController(text: '0');
-  
-  final TextEditingController _sessionsController = TextEditingController(text: '4');
+  final TextEditingController _studyMin1Controller = TextEditingController(
+    text: '2',
+  );
+  final TextEditingController _studyMin2Controller = TextEditingController(
+    text: '5',
+  );
+  final TextEditingController _studySec1Controller = TextEditingController(
+    text: '0',
+  );
+  final TextEditingController _studySec2Controller = TextEditingController(
+    text: '0',
+  );
 
-  // Timer State 
+  // Individual digit controllers for break time (MM:SS)
+  final TextEditingController _breakMin1Controller = TextEditingController(
+    text: '0',
+  );
+  final TextEditingController _breakMin2Controller = TextEditingController(
+    text: '5',
+  );
+  final TextEditingController _breakSec1Controller = TextEditingController(
+    text: '0',
+  );
+  final TextEditingController _breakSec2Controller = TextEditingController(
+    text: '0',
+  );
+
+  final TextEditingController _sessionsController = TextEditingController(
+    text: '4',
+  );
+
+  // Timer State
   TimerPhase _phase = TimerPhase.setup;
   Timer? _timer;
   bool _isRunning = false;
-  
+
   int _secondsRemaining = 0;
   int _totalSessions = 4;
   int _currentSession = 1;
@@ -55,7 +80,7 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
   int _breakTimeMinutes = 5;
   int _studyTimeTotalSeconds = 1500; // 25 * 60
   int _breakTimeTotalSeconds = 300; // 5 * 60
-  
+
   // Button press states
   bool _isCancelPressed = false;
   bool _isPlayPressed = false;
@@ -64,12 +89,13 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
   late AudioService _audioService;
   late LocalStorageService _storageService;
 
-  // Gamification State 
+  // Gamification State
   int _currentPlantState = 0; // 0 έως 6
   double _secondsPerGrowthStage = 0;
-  int _totalStudyTimeElapsed = 0; // Συνολικός χρόνος διαβάσματος σε όλα τα sessions
+  int _totalStudyTimeElapsed =
+      0; // Συνολικός χρόνος διαβάσματος σε όλα τα sessions
 
-  // Animation 
+  // Animation
   late AnimationController _cloudController;
   late Animation<Alignment> _cloudAnimation;
 
@@ -78,7 +104,7 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
   late Animation<double> _wateringCanScaleAnimation;
   late Animation<double> _wateringCanGlowAnimation;
 
-  // Assets Paths 
+  // Assets Paths
   final List<String> _plantStages = [
     'assets/images/plant_level0.svg',
     'assets/images/plant_level1.svg',
@@ -90,12 +116,14 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
   ];
   final String _potPath = 'assets/images/happy_pot.svg';
   final String _grassPath = 'assets/images/grass.svg';
-  
 
-  final String _wateringModePath = 'assets/images/watering_mode.svg'; // Ποτιστήρι που ποτίζει (studying)
-  final String _breakWateringPath = 'assets/images/break_tap_with_water.svg'; // Ποτιστήρι + Βρύση (break)
+  final String _wateringModePath =
+      'assets/images/watering_mode.svg'; // Ποτιστήρι που ποτίζει (studying)
+  final String _breakWateringPath =
+      'assets/images/break_tap_with_water.svg'; // Ποτιστήρι + Βρύση (break)
   final String _tapBeggingPath = 'assets/images/tap_begging.svg'; // Βρύση
-  final String _wateringCanDefaultPath = 'assets/images/watering_can_default.svg'; // Ποτιστήρι default
+  final String _wateringCanDefaultPath =
+      'assets/images/watering_can_default.svg'; // Ποτιστήρι default
 
   // Plant layout per level (Figma-based positions/dimensions)
   static const List<_PlantLayout> _plantLayouts = [
@@ -121,7 +149,7 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
     super.initState();
     _audioService = AudioService();
     _storageService = LocalStorageService();
-    
+
     // Background Animation (ίδιο με Main Page)
     _cloudController = AnimationController(
       vsync: this,
@@ -141,30 +169,36 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
 
     _wateringCanScaleAnimation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.0, end: 1.15).chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween<double>(
+          begin: 1.0,
+          end: 1.15,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 40,
       ),
+      TweenSequenceItem(tween: ConstantTween<double>(1.15), weight: 20),
       TweenSequenceItem(
-        tween: ConstantTween<double>(1.15),
-        weight: 20,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1.15, end: 1.0).chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween<double>(
+          begin: 1.15,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 40,
       ),
     ]).animate(_wateringCanScaleController);
 
     _wateringCanGlowAnimation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0.0, end: 0.8).chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween<double>(
+          begin: 0.0,
+          end: 0.8,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 40,
       ),
+      TweenSequenceItem(tween: ConstantTween<double>(0.8), weight: 20),
       TweenSequenceItem(
-        tween: ConstantTween<double>(0.8),
-        weight: 20,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 0.8, end: 0.0).chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween<double>(
+          begin: 0.8,
+          end: 0.0,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 40,
       ),
     ]).animate(_wateringCanScaleController);
@@ -187,7 +221,7 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
     super.dispose();
   }
 
-  // Logic 
+  // Logic
 
   void _startTimerLogic() {
     // Διαβάζουμε τις τιμές από τα TextFields (Manual Input - individual digits)
@@ -200,7 +234,7 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
       _studyTimeMinutes = studyMin1 * 10 + studyMin2;
       final studyTimeSeconds = studySec1 * 10 + studySec2;
       _studyTimeTotalSeconds = (_studyTimeMinutes * 60) + studyTimeSeconds;
-      
+
       // Combine individual digits for break time
       final breakMin1 = int.tryParse(_breakMin1Controller.text) ?? 0;
       final breakMin2 = int.tryParse(_breakMin2Controller.text) ?? 0;
@@ -209,9 +243,9 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
       _breakTimeMinutes = breakMin1 * 10 + breakMin2;
       final breakTimeSeconds = breakSec1 * 10 + breakSec2;
       _breakTimeTotalSeconds = (_breakTimeMinutes * 60) + breakTimeSeconds;
-      
+
       _totalSessions = int.tryParse(_sessionsController.text) ?? 4;
-      
+
       // Αρχικοποίηση χρόνου (use total seconds)
       _secondsRemaining = _studyTimeTotalSeconds;
       _phase = TimerPhase.studying;
@@ -219,7 +253,7 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
       _isRunning = true;
       _currentPlantState = 0; // Ξεκινάμε από σπόρο
       _totalStudyTimeElapsed = 0; // Reset συνολικού χρόνου
-      
+
       // Υπολογισμός ρυθμού ανάπτυξης βάσει ΣΥΝΟΛΙΚΟΥ χρόνου όλων των sessions
       final totalStudyTime = _totalSessions * _studyTimeTotalSeconds;
       _secondsPerGrowthStage = totalStudyTime / 6;
@@ -236,18 +270,19 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
   void _startTicker() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) return;
-      
+
       setState(() {
         if (_secondsRemaining > 0) {
           _secondsRemaining--;
-          
+
           // Λογική ανάπτυξης φυτού (μόνο στο Studying phase)
           if (_phase == TimerPhase.studying) {
             // Αύξηση συνολικού χρόνου διαβάσματος
             _totalStudyTimeElapsed++;
-            
+
             // Calculate plant state based on TOTAL elapsed study time
-            int stage = (_totalStudyTimeElapsed / _secondsPerGrowthStage).floor();
+            int stage = (_totalStudyTimeElapsed / _secondsPerGrowthStage)
+                .floor();
             _currentPlantState = stage.clamp(0, 6);
           }
         } else {
@@ -259,121 +294,122 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
 
   void _handlePhaseEnd() async {
     _timer?.cancel();
-    
+
     // Check if sound effects are enabled
     final soundEffectsEnabled = _storageService.isSoundEffectsEnabled;
-    
+
     // ΤΕΛΟΣ ΔΙΑΒΑΣΜΑΤΟΣ
     if (_phase == TimerPhase.studying) {
-      
-      // Αν υπάρχουν κι άλλα sessions 
+      // Αν υπάρχουν κι άλλα sessions
       if (_currentSession < _totalSessions) {
         // Play break time start sound
         if (soundEffectsEnabled) {
           await _audioService.playBreakTimeStart();
         }
-        
+
         setState(() {
           _phase = TimerPhase.breaking; // ΑΛΛΑΓΗ ΦΑΣΗΣ ΣΕ ΔΙΑΛΕΙΜΜΑ
-          _secondsRemaining = _breakTimeTotalSeconds; // ΧΡΟΝΟΣ ΔΙΑΛΕΙΜΜΑΤΟΣ (με seconds)
+          _secondsRemaining =
+              _breakTimeTotalSeconds; // ΧΡΟΝΟΣ ΔΙΑΛΕΙΜΜΑΤΟΣ (με seconds)
         });
         _startTicker(); // Αυτόματη έναρξη του διαλείμματος
-      } 
+      }
       // Αν ήταν το τελευταίο session
       else {
         // Play end of sessions sound
         if (soundEffectsEnabled) {
           await _audioService.playEndOfSessions();
         }
-        
+
         // Προσπάθεια αποθήκευσης στη βάση (με error handling)
         try {
           final db = DatabaseHelper();
           await db.updatePlantState(6, _totalSessions * _studyTimeMinutes);
-          
+
           // Αποθήκευση στο Album
           await db.addCompletedPlant(
-              'assets/images/plant_level6.svg', 
-              'Sunflower #${DateTime.now().day}/${DateTime.now().month}'
+            'assets/images/plant_level6.svg',
+            'Sunflower #${DateTime.now().day}/${DateTime.now().month}',
           );
         } catch (e) {
           print('Error saving to database: $e');
         }
 
         // Εμφάνιση dialog με ευχαριστίες
-        if(mounted) {
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (BuildContext context) {
-                return Dialog(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    side: const BorderSide(color: Colors.black, width: 2),
-                  ),
-                  backgroundColor: const Color(0xFFFFD966),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Mr plant is very happy\nthat you took care of him!',
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.heading2.copyWith(
-                            color: const Color(0xFF0C4587),
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                          ),
+        if (mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (BuildContext context) {
+              return Dialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: const BorderSide(color: Colors.black, width: 2),
+                ),
+                backgroundColor: const Color(0xFFFFD966),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Mr plant is very happy\nthat you took care of him!',
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.heading2.copyWith(
+                          color: const Color(0xFF0C4587),
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
                         ),
-                        const SizedBox(height: 30),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.of(context).pop(); // Κλείσε το dialog
-                              // Επιστροφή στο home
-                              if(mounted && Navigator.canPop(context)) {
-                                Navigator.of(context).pop();
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF0C4587),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(25),
-                              ),
-                            ),
-                            child: Text(
-                              'OK',
-                              style: AppTextStyles.heading2.copyWith(
-                                color: Colors.white,
-                                fontSize: 24,
-                              ),
+                      ),
+                      const SizedBox(height: 30),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context).pop(); // Κλείσε το dialog
+                            // Επιστροφή στο home
+                            if (mounted && Navigator.canPop(context)) {
+                              Navigator.of(context).pop();
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0C4587),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25),
                             ),
                           ),
+                          child: Text(
+                            'OK',
+                            style: AppTextStyles.heading2.copyWith(
+                              color: Colors.white,
+                              fontSize: 24,
+                            ),
+                          ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                );
-              },
-            );
+                ),
+              );
+            },
+          );
         }
       }
-    } 
+    }
     // ΤΕΛΟΣ ΔΙΑΛΕΙΜΜΑΤΟΣ (BREAKING)
     else if (_phase == TimerPhase.breaking) {
       // Play study time start sound for next session
       if (soundEffectsEnabled) {
         await _audioService.playStudyTimeStart();
       }
-      
+
       // Τέλος Διαλείμματος -> Πάμε στο επόμενο session διαβάσματος
       setState(() {
         _currentSession++; // Αυξάνουμε τον αριθμό του session
         _phase = TimerPhase.studying; // ΕΠΙΣΤΡΟΦΗ ΣΕ ΔΙΑΒΑΣΜΑ
-        _secondsRemaining = _studyTimeTotalSeconds; // ΧΡΟΝΟΣ ΜΕΛΕΤΗΣ (με seconds)
+        _secondsRemaining =
+            _studyTimeTotalSeconds; // ΧΡΟΝΟΣ ΜΕΛΕΤΗΣ (με seconds)
         // ΔΕΝ κάνουμε reset το _currentPlantState - συνεχίζει να μεγαλώνει
       });
       _startTicker(); // Αυτόματη έναρξη
@@ -399,7 +435,7 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
     });
   }
 
-  // UI Helpers 
+  // UI Helpers
   String get _timerString {
     int min = _secondsRemaining ~/ 60;
     int sec = _secondsRemaining % 60;
@@ -414,12 +450,12 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
         return Scaffold(
           body: CloudyBackground(
             drift: _cloudAnimation.value,
-            child: _phase == TimerPhase.setup 
-                ? _buildSetupView() 
+            child: _phase == TimerPhase.setup
+                ? _buildSetupView()
                 : _buildActiveTimerView(),
           ),
         );
-      }
+      },
     );
   }
 
@@ -429,18 +465,20 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
       builder: (context, constraints) {
         final screenWidth = constraints.maxWidth;
         final screenHeight = constraints.maxHeight;
-        
+
         // Calculate responsive positions - exact Figma dimensions
         final containerWidth = 270.0; // Exact Figma width
         final containerHeight = 415.0; // Exact Figma height
         final containerLeft = (screenWidth - containerWidth) / 2;
-        final containerTop = (screenHeight - containerHeight) / 2; // Center vertically
-        
+        final containerTop =
+            (screenHeight - containerHeight) / 2; // Center vertically
+
         final cancelTop = containerTop - 130; // 130px above container
         final cancelLeft = (screenWidth - 87.1) / 2;
-        
-        final playTop = containerTop + containerHeight + 50; // 50px below container
-        
+
+        final playTop =
+            containerTop + containerHeight + 50; // 50px below container
+
         return Stack(
           children: [
             // Cancel X button (Figma assets: Default 87.1px / Variant2 93px when pressed)
@@ -461,13 +499,17 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
                     color: Colors.transparent,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: _isCancelPressed ? const Color(0xFF671A1A) : const Color(0xFF1D1B20),
+                      color: _isCancelPressed
+                          ? const Color(0xFF671A1A)
+                          : const Color(0xFF1D1B20),
                       width: 8,
                     ),
                   ),
                   child: Icon(
                     Icons.close,
-                    color: _isCancelPressed ? const Color(0xFF671A1A) : const Color(0xFF1D1B20),
+                    color: _isCancelPressed
+                        ? const Color(0xFF671A1A)
+                        : const Color(0xFF1D1B20),
                     size: 45,
                   ),
                 ),
@@ -490,66 +532,122 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
                       height: containerHeight,
                       fit: BoxFit.fill,
                     ),
-                    
+
                     // Editable fields positioned over the SVG white boxes (Figma exact positions)
                     // Studying time - 4 individual boxes for M M : S S
                     // Timer inset: [16.39%, 10%, 69.4%, 10%] - top, right, bottom, left
                     // Box 1 (M1): inset [8.47%, 77.62%, 9.82%, 3.7%] within timer
                     _buildDigitBox(
-                      containerWidth, containerHeight,
-                      timerTop: 0.1639, timerLeft: 0.10, timerRight: 0.10, timerBottom: 0.694,
-                      boxTop: 0.0847, boxLeft: 0.037, boxRight: 0.7762, boxBottom: 0.0982,
+                      containerWidth,
+                      containerHeight,
+                      timerTop: 0.1639,
+                      timerLeft: 0.10,
+                      timerRight: 0.10,
+                      timerBottom: 0.694,
+                      boxTop: 0.0847,
+                      boxLeft: 0.037,
+                      boxRight: 0.7762,
+                      boxBottom: 0.0982,
                       controller: _studyMin1Controller,
                     ),
                     // Box 2 (M2): inset [8.47%, 54.93%, 9.82%, 26.39%]
                     _buildDigitBox(
-                      containerWidth, containerHeight,
-                      timerTop: 0.1639, timerLeft: 0.10, timerRight: 0.10, timerBottom: 0.694,
-                      boxTop: 0.0847, boxLeft: 0.2639, boxRight: 0.5493, boxBottom: 0.0982,
+                      containerWidth,
+                      containerHeight,
+                      timerTop: 0.1639,
+                      timerLeft: 0.10,
+                      timerRight: 0.10,
+                      timerBottom: 0.694,
+                      boxTop: 0.0847,
+                      boxLeft: 0.2639,
+                      boxRight: 0.5493,
+                      boxBottom: 0.0982,
                       controller: _studyMin2Controller,
                     ),
                     // Box 3 (S1): inset [8.47%, 27.16%, 9.82%, 54.17%]
                     _buildDigitBox(
-                      containerWidth, containerHeight,
-                      timerTop: 0.1639, timerLeft: 0.10, timerRight: 0.10, timerBottom: 0.694,
-                      boxTop: 0.0847, boxLeft: 0.5417, boxRight: 0.2716, boxBottom: 0.0982,
+                      containerWidth,
+                      containerHeight,
+                      timerTop: 0.1639,
+                      timerLeft: 0.10,
+                      timerRight: 0.10,
+                      timerBottom: 0.694,
+                      boxTop: 0.0847,
+                      boxLeft: 0.5417,
+                      boxRight: 0.2716,
+                      boxBottom: 0.0982,
                       controller: _studySec1Controller,
                     ),
                     // Box 4 (S2): inset [8.47%, 4.47%, 9.82%, 76.85%]
                     _buildDigitBox(
-                      containerWidth, containerHeight,
-                      timerTop: 0.1639, timerLeft: 0.10, timerRight: 0.10, timerBottom: 0.694,
-                      boxTop: 0.0847, boxLeft: 0.7685, boxRight: 0.0447, boxBottom: 0.0982,
+                      containerWidth,
+                      containerHeight,
+                      timerTop: 0.1639,
+                      timerLeft: 0.10,
+                      timerRight: 0.10,
+                      timerBottom: 0.694,
+                      boxTop: 0.0847,
+                      boxLeft: 0.7685,
+                      boxRight: 0.0447,
+                      boxBottom: 0.0982,
                       controller: _studySec2Controller,
                     ),
-                    
+
                     // Break time - 4 individual boxes for M M : S S
                     // Timer inset: [50.12%, 10%, 35.66%, 10%]
                     _buildDigitBox(
-                      containerWidth, containerHeight,
-                      timerTop: 0.5012, timerLeft: 0.10, timerRight: 0.10, timerBottom: 0.3566,
-                      boxTop: 0.0847, boxLeft: 0.037, boxRight: 0.7762, boxBottom: 0.0982,
+                      containerWidth,
+                      containerHeight,
+                      timerTop: 0.5012,
+                      timerLeft: 0.10,
+                      timerRight: 0.10,
+                      timerBottom: 0.3566,
+                      boxTop: 0.0847,
+                      boxLeft: 0.037,
+                      boxRight: 0.7762,
+                      boxBottom: 0.0982,
                       controller: _breakMin1Controller,
                     ),
                     _buildDigitBox(
-                      containerWidth, containerHeight,
-                      timerTop: 0.5012, timerLeft: 0.10, timerRight: 0.10, timerBottom: 0.3566,
-                      boxTop: 0.0847, boxLeft: 0.2639, boxRight: 0.5493, boxBottom: 0.0982,
+                      containerWidth,
+                      containerHeight,
+                      timerTop: 0.5012,
+                      timerLeft: 0.10,
+                      timerRight: 0.10,
+                      timerBottom: 0.3566,
+                      boxTop: 0.0847,
+                      boxLeft: 0.2639,
+                      boxRight: 0.5493,
+                      boxBottom: 0.0982,
                       controller: _breakMin2Controller,
                     ),
                     _buildDigitBox(
-                      containerWidth, containerHeight,
-                      timerTop: 0.5012, timerLeft: 0.10, timerRight: 0.10, timerBottom: 0.3566,
-                      boxTop: 0.0847, boxLeft: 0.5417, boxRight: 0.2716, boxBottom: 0.0982,
+                      containerWidth,
+                      containerHeight,
+                      timerTop: 0.5012,
+                      timerLeft: 0.10,
+                      timerRight: 0.10,
+                      timerBottom: 0.3566,
+                      boxTop: 0.0847,
+                      boxLeft: 0.5417,
+                      boxRight: 0.2716,
+                      boxBottom: 0.0982,
                       controller: _breakSec1Controller,
                     ),
                     _buildDigitBox(
-                      containerWidth, containerHeight,
-                      timerTop: 0.5012, timerLeft: 0.10, timerRight: 0.10, timerBottom: 0.3566,
-                      boxTop: 0.0847, boxLeft: 0.7685, boxRight: 0.0447, boxBottom: 0.0982,
+                      containerWidth,
+                      containerHeight,
+                      timerTop: 0.5012,
+                      timerLeft: 0.10,
+                      timerRight: 0.10,
+                      timerBottom: 0.3566,
+                      boxTop: 0.0847,
+                      boxLeft: 0.7685,
+                      boxRight: 0.0447,
+                      boxBottom: 0.0982,
                       controller: _breakSec2Controller,
                     ),
-                    
+
                     // Sessions box: inset [83.61%, 42.47%, 4.77%, 42.59%]
                     Positioned(
                       top: containerHeight * 0.8361,
@@ -594,7 +692,9 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
                   width: _isPlayPressed ? 72 : 66,
                   height: _isPlayPressed ? 72 : 66,
                   decoration: BoxDecoration(
-                    color: _isPlayPressed ? const Color(0xFF671A1A) : Colors.black,
+                    color: _isPlayPressed
+                        ? const Color(0xFF671A1A)
+                        : Colors.black,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
@@ -637,13 +737,13 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
     final timerLeftPx = containerWidth * timerLeft;
     final timerWidth = containerWidth * (1 - timerLeft - timerRight);
     final timerHeight = containerHeight * (1 - timerTop - timerBottom);
-    
+
     // Calculate box position within timer area
     final boxTopPx = timerHeight * boxTop;
     final boxLeftPx = timerWidth * boxLeft;
     final boxWidth = timerWidth * (1 - boxLeft - boxRight);
     final boxHeight = timerHeight * (1 - boxTop - boxBottom);
-    
+
     return Positioned(
       top: timerTopPx + boxTopPx,
       left: timerLeftPx + boxLeftPx,
@@ -710,10 +810,7 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: const Color(0xFF1E90FF),
-          width: 2.5,
-        ),
+        border: Border.all(color: const Color(0xFF1E90FF), width: 2.5),
       ),
       child: Center(
         child: TextField(
@@ -789,7 +886,10 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
   }
 
   // Build transparent editable timer for SVG overlay (MM:SS format)
-  Widget _buildTransparentEditableTimer(TextEditingController minController, TextEditingController secController) {
+  Widget _buildTransparentEditableTimer(
+    TextEditingController minController,
+    TextEditingController secController,
+  ) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -813,7 +913,10 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
   }
 
   // Build transparent editable box for overlay on SVG
-  Widget _buildTransparentEditableBox(TextEditingController controller, int maxLength) {
+  Widget _buildTransparentEditableBox(
+    TextEditingController controller,
+    int maxLength,
+  ) {
     return SizedBox(
       width: 78,
       height: 52,
@@ -884,8 +987,12 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
   Widget _buildFourDigitTimer(TextEditingController controller) {
     // Split controller text into individual characters
     final text = controller.text.padLeft(2, '0');
-    final digit1Controller = TextEditingController(text: text.isNotEmpty ? text[0] : '0');
-    final digit2Controller = TextEditingController(text: text.length > 1 ? text[1] : '0');
+    final digit1Controller = TextEditingController(
+      text: text.isNotEmpty ? text[0] : '0',
+    );
+    final digit2Controller = TextEditingController(
+      text: text.length > 1 ? text[1] : '0',
+    );
 
     return Container(
       decoration: BoxDecoration(
@@ -909,9 +1016,19 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
             ),
           ),
           // First second digit (always 0)
-          _buildSingleDigitBox(TextEditingController(text: '0'), -1, null, readOnly: true),
+          _buildSingleDigitBox(
+            TextEditingController(text: '0'),
+            -1,
+            null,
+            readOnly: true,
+          ),
           // Second second digit (always 0)
-          _buildSingleDigitBox(TextEditingController(text: '0'), -1, null, readOnly: true),
+          _buildSingleDigitBox(
+            TextEditingController(text: '0'),
+            -1,
+            null,
+            readOnly: true,
+          ),
         ],
       ),
     );
@@ -963,15 +1080,15 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
     );
   }
 
-  // VIEW 2 & 3: ACTIVE TIMER (Studying / Break) 
+  // VIEW 2 & 3: ACTIVE TIMER (Studying / Break)
   Widget _buildActiveTimerView() {
     bool isStudying = _phase == TimerPhase.studying;
-    
+
     return LayoutBuilder(
       builder: (context, constraints) {
         // Same scale factor as main page
         final double scale = (constraints.maxHeight / 917.0).clamp(0.7, 1.4);
-        
+
         // Dimensions (same as main page)
         final double potHeight = 289 * scale;
         final double potWidth = 173 * scale;
@@ -987,18 +1104,19 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
         final _PlantLayout layout = _plantLayouts[_currentPlantState];
         final double plantHeight = layout.height * scale;
         final double plantWidth = layout.width * scale;
-        final double plantLeft = layout.left * scale; // Use layout.left for per-level positioning
+        final double plantLeft =
+            layout.left * scale; // Use layout.left for per-level positioning
         final double plantBottom = layout.bottom * scale;
         final double wateringBottom = 70 * scale;
         final double wateringRight = -15 * scale; // Ελαφρώς πιο δεξιά
         final double settingsLeft = 10 * scale;
         final double settingsTop = 17 * scale;
         final double settingsSize = 72 * scale;
-        
+
         // Get animation values
         final double scaleValue = _wateringCanScaleAnimation.value;
         final double glowOpacity = _wateringCanGlowAnimation.value;
-        
+
         return Stack(
           children: [
             // Settings Icon
@@ -1020,7 +1138,7 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
               ),
             ),
 
-            // Τίτλος & Χρονόμετρο 
+            // Τίτλος & Χρονόμετρο
             Positioned(
               top: 100 * scale,
               left: 0,
@@ -1038,7 +1156,10 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
                   const SizedBox(height: 10),
                   // Χρονόμετρο
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 20 * scale, vertical: 10 * scale),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 20 * scale,
+                      vertical: 10 * scale,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.blue,
                       borderRadius: BorderRadius.circular(20),
@@ -1046,7 +1167,10 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
                     child: Column(
                       children: [
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 10 * scale, vertical: 2 * scale),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 10 * scale,
+                            vertical: 2 * scale,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.blue.shade300,
                             borderRadius: BorderRadius.circular(10),
@@ -1072,7 +1196,7 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
                       ],
                     ),
                   ),
-                  
+
                   // Controls (Play/Pause/Stop)
                   SizedBox(height: 10 * scale),
                   Row(
@@ -1089,7 +1213,7 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
                         onPressed: _stopTimer,
                       ),
                     ],
-                  )
+                  ),
                 ],
               ),
             ),
@@ -1138,7 +1262,7 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
                 width: 306.828 * scale,
                 height: 306.828 * scale,
                 child: Transform.rotate(
-                  angle: 0 * 3.14159 / 180, 
+                  angle: 0 * 3.14159 / 180,
                   alignment: Alignment.center,
                   child: SizedBox(
                     width: 216 * scale,
@@ -1164,7 +1288,6 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen> with TickerProv
                   ),
                 ),
               ),
-
           ],
         );
       },

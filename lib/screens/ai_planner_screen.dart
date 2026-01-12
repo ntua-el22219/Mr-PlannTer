@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../data/database_helper.dart';
 import '../data/task_model.dart';
 import '../data/gemini_service.dart';
+import '../data/recurrence_helper.dart';
+import '../widgets/cloudy_background.dart';
 
 class AIPlannerScreen extends StatefulWidget {
   const AIPlannerScreen({super.key});
@@ -11,43 +13,131 @@ class AIPlannerScreen extends StatefulWidget {
 }
 
 class _AIPlannerScreenState extends State<AIPlannerScreen> {
-  final TextEditingController _controller = TextEditingController();
+  List<Task> _unplannedTasks = [];
+  bool _isLoading = true;
   bool _isGenerating = false;
-  List<Map<String, dynamic>> _generatedSteps = [];
+  final Map<int, Map<String, dynamic>> _suggestions = {}; // taskId -> {date, time, reasoning}
+  
+  @override
+  void initState() {
+    super.initState();
+    _loadUnplannedTasks();
+  }
 
-  // Δημιουργία του πλάνου με το Gemini AI
-  Future<void> _generatePlan() async {
-    final text = _controller.text.trim();
-    if (text.isEmpty) return;
+  Future<void> _loadUnplannedTasks() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _suggestions.clear();
+      });
 
-    FocusScope.of(context).unfocus(); // Κλείνει το πληκτρολόγιο
+      final taskMaps = await DatabaseHelper().queryAllTasks();
+      final unplanned = taskMaps
+          .map((map) => Task.fromMap(map))
+          .where((task) => task.scheduledDate.isEmpty && task.type == 'task')
+          .toList();
+      
+      setState(() {
+        _unplannedTasks = unplanned;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      _showErrorDialog("Failed to load tasks: $e");
+    }
+  }
 
-    setState(() {
-      _isGenerating = true;
-      _generatedSteps = []; // Καθαρίζουμε τη λίστα
-    });
+  Future<void> _generateSuggestions() async {
+    if (_unplannedTasks.isEmpty) {
+      _showErrorDialog("No unplanned tasks to schedule");
+      return;
+    }
+
+    setState(() => _isGenerating = true);
 
     try {
-      // Προσπαθούμε να πάρουμε τα αποτελέσματα
-      final steps = await GeminiService().generateStudyPlan(text);
+      final allTasks = await DatabaseHelper().queryAllTasks();
+      final plannedTasks = allTasks
+          .map((e) => Task.fromMap(e))
+          .where((t) => t.scheduledDate.isNotEmpty && t.scheduledTime.isNotEmpty)
+          .toList();
 
+      final today = DateTime.now();
+      final horizonEnd = today.add(const Duration(days: 7));
+      final plannedBlocks = <String>[];
+
+      for (final t in plannedTasks) {
+        // Base instance
+        plannedBlocks.add(
+          "${t.title} on ${t.scheduledDate} at ${t.scheduledTime} (${t.duration}min, importance ${t.importance})",
+        );
+
+        // Recurring instances within 7-day horizon
+        if (t.recurrenceRule.isNotEmpty) {
+          for (int d = 0; d <= 7; d++) {
+            final date = DateTime(today.year, today.month, today.day + d);
+            if (RecurrenceHelper.occursOnDate(t, date)) {
+              final dateStr = date.toIso8601String().split('T')[0];
+              plannedBlocks.add(
+                "${t.title} on $dateStr at ${t.scheduledTime} (${t.duration}min, importance ${t.importance})",
+              );
+            }
+          }
+        }
+      }
+
+      final plannedSummary = plannedBlocks.isEmpty ? 'None' : plannedBlocks.join('; ');
+
+      final unplannedSummary = _unplannedTasks
+          .map((t) => "${t.title} (${t.duration}min, importance ${t.importance})")
+          .join("; ");
+
+      final prompt = '''
+        Today is ${DateTime.now().toString().split(' ')[0]}.
+
+        Existing scheduled tasks (avoid conflicts, keep their time blocks free):
+        $plannedSummary
+
+        Tasks to schedule (within the next 7 days):
+        $unplannedSummary
+
+        Rules:
+        - Do NOT overlap any planned tasks.
+        - Do NOT overlap suggested tasks with each other.
+        - Avoid scheduling two high-importance tasks (importance >=4) back-to-back; leave breathing room.
+        - Use realistic spacing; keep mornings for focus-heavy tasks when possible.
+        - Use 24h time. Keep suggestions within 7 days from today.
+
+        RETURN ONLY lines in this exact format:
+        TASK_NUMBER|DATE(YYYY-MM-DD)|TIME(HH:MM 24h)|REASON
+
+        Example:
+        1|2026-01-13|09:00|Morning focus slot, no conflicts
+        2|2026-01-13|14:30|After lunch, avoids overlap with Meeting
+      ''';
+
+      final suggestions = await GeminiService().generateScheduleSuggestions(prompt);
+      
       if (mounted) {
         setState(() {
-          _generatedSteps = steps.map((step) => {
-            'title': step,
-            'isSelected': true
-          }).toList();
+          _suggestions.clear();
+          for (var i = 0; i < suggestions.length && i < _unplannedTasks.length; i++) {
+            final parts = suggestions[i].split('|');
+            if (parts.length >= 3) {
+              _suggestions[i] = {
+                'date': parts[1].trim(),
+                'time': parts[2].trim(),
+                'reason': parts.length > 3 ? parts[3].trim() : '',
+              };
+            }
+          }
           _isGenerating = false;
         });
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _isGenerating = false; // Σταματάμε το loading
-        });
-        
-        // Εμφανίζουμε το Popup
-        _showErrorDialog("Oops! Something went wrong.\n\nDetails: $e");
+        setState(() => _isGenerating = false);
+        _showErrorDialog("Failed to generate suggestions: $e");
       }
     }
   }
@@ -55,64 +145,32 @@ class _AIPlannerScreenState extends State<AIPlannerScreen> {
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
-      barrierDismissible: false, // Ο χρήστης πρέπει να πατήσει το κουμπί για να κλείσει
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        // Σχήμα με στρογγυλεμένες γωνίες
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white, // Αποφυγή μωβ απόχρωσης στο Material 3
-        
-        // Τίτλος με Εικονίδιο και Χρώμα
         title: Column(
           children: [
-            Icon(
-              Icons.error_outline_rounded,
-              size: 60,
-              color: Colors.redAccent.shade200, // Απαλό κόκκινο
-            ),
+            Icon(Icons.error_outline_rounded, size: 60, color: Colors.redAccent.shade200),
             const SizedBox(height: 10),
             Text(
-              "Something went wrong",
+              "Oops!",
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.red.shade900,
-                fontWeight: FontWeight.bold,
-                fontSize: 22,
-              ),
+              style: TextStyle(color: Colors.red.shade900, fontWeight: FontWeight.bold, fontSize: 20),
             ),
           ],
         ),
-
-        // Το κυρίως μήνυμα
-        content: Text(
-          message,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 16, color: Colors.black54),
-        ),
-
-        // Το κουμπί από κάτω
+        content: Text(message, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14)),
         actions: [
           Center(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.redAccent, // Κόκκινο φόντο
-                  foregroundColor: Colors.white, // Άσπρα γράμματα
-                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30), // Οβάλ κουμπί
-                  ),
-                  elevation: 5, // Σκιά για βάθος
-                ),
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                },
-                child: const Text(
-                  "OK",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text("OK"),
             ),
           ),
         ],
@@ -120,229 +178,386 @@ class _AIPlannerScreenState extends State<AIPlannerScreen> {
     );
   }
 
-  Future<void> _saveSelectedTasks() async {
-    // Ρωτάμε τον χρήστη για Ημερομηνία
-    final DateTime? pickedDate = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2100),
-      helpText: "SELECT START DATE",
-    );
+  Future<void> _acceptSuggestion(int taskIndex) async {
+    final suggestion = _suggestions[taskIndex];
+    if (suggestion == null) return;
 
-    if (pickedDate == null) return; // Αν πατήσει Cancel, δεν κάνουμε τίποτα
+    try {
+      final task = _unplannedTasks[taskIndex];
+      task.scheduledDate = suggestion['date'];
+      task.scheduledTime = suggestion['time'];
 
-    // Ρωτάμε τον χρήστη για Ώρα
-    final TimeOfDay? pickedTime = await showTimePicker(
-      context: context,
-      initialTime: const TimeOfDay(hour: 9, minute: 0),
-      helpText: "SELECT TIME",
-    );
+      await DatabaseHelper().updateTask(task.toMap());
+      
+      // Remove this task from unplanned list without full reload
+      setState(() {
+        _unplannedTasks.removeAt(taskIndex);
+        // Rebuild suggestion map with adjusted indices
+        final newSuggestions = <int, Map<String, dynamic>>{};
+        _suggestions.forEach((key, value) {
+          if (key < taskIndex) {
+            newSuggestions[key] = value;
+          } else if (key > taskIndex) {
+            newSuggestions[key - 1] = value;
+          }
+        });
+        _suggestions.clear();
+        _suggestions.addAll(newSuggestions);
+      });
 
-    if (pickedTime == null) return; // Αν πατήσει Cancel, σταματάμε
-
-    // Μετατροπή της ώρας σε κείμενο 
-    final String formattedTime = 
-        "${pickedTime.hour.toString().padLeft(2, '0')}:${pickedTime.minute.toString().padLeft(2, '0')}";
-    
-    // Μετατροπή ημερομηνίας σε κείμενο 
-    final String formattedDate = pickedDate.toIso8601String().split('T')[0];
-
-    int count = 0;
-    for (var step in _generatedSteps) {
-      if (step['isSelected']) {
-        final newTask = Task(
-          title: step['title'],
-          type: 'task',
-          scheduledDate: formattedDate, // Χρήση της επιλεγμένης ημερομηνίας
-          scheduledTime: formattedTime, // Χρήση της επιλεγμένης ώρας
-          description: "AI Plan: ${_controller.text}",
-          duration: 30,
-          importance: 2,
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("✅ ${task.title} scheduled for ${suggestion['date']} at ${suggestion['time']}"),
+            backgroundColor: Colors.green.shade600,
+            duration: const Duration(seconds: 2),
+          ),
         );
-        await DatabaseHelper().insertTask(newTask.toMap());
-        count++;
       }
+    } catch (e) {
+      _showErrorDialog("Failed to save task: $e");
     }
+  }
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("$count Tasks added for $formattedDate at $formattedTime!")),
-      );
-      Navigator.pop(context, true);
-    }
+  Future<void> _rejectSuggestion(int taskIndex) async {
+    setState(() {
+      _suggestions.remove(taskIndex);
+    });
+  }
+
+  Future<void> _editSuggestion(int taskIndex) async {
+    final suggestion = _suggestions[taskIndex];
+    if (suggestion == null) return;
+
+    // Show custom edit dialog
+    final dateController = TextEditingController(text: suggestion['date']);
+    final timeController = TextEditingController(text: suggestion['time']);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFE082),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.black, width: 2),
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Edit Schedule",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue.shade900),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: dateController,
+                decoration: InputDecoration(
+                  labelText: "Date (YYYY-MM-DD)",
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: timeController,
+                decoration: InputDecoration(
+                  labelText: "Time (HH:MM)",
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey.shade300,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: const Text("Cancel"),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _suggestions[taskIndex]!['date'] = dateController.text;
+                        _suggestions[taskIndex]!['time'] = timeController.text;
+                      });
+                      Navigator.pop(ctx);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue.shade900,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: const Text("Save"),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.lightBlue.shade200, // Φόντο Ουρανού
-      resizeToAvoidBottomInset: true, // Για να ανεβαίνει όταν βγαίνει το πληκτρολόγιο
-      body: SafeArea(
+      body: CloudyAnimatedBackground(
         child: Stack(
+          alignment: Alignment.center,
           children: [
-            // Κουμπί Κλεισίματος (X) ψηλά
+            // Close Button (X) - Centered at top
             Positioned(
-              top: 10, left: 0, right: 0,
-              child: Center(
-                child: IconButton(
-                  icon: const Icon(Icons.cancel_outlined, size: 50, color: Colors.black87),
-                  onPressed: () => Navigator.pop(context),
+              top: 80,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context, true),
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.black, width: 2.5),
+                  ),
+                  child: const Icon(Icons.close, size: 35, color: Colors.black),
                 ),
               ),
             ),
 
-            // Το Κίτρινο Πλαίσιο
-            Padding(
-              padding: const EdgeInsets.only(top: 70, left: 20, right: 20, bottom: 20),
+            // Main Yellow Container
+            Positioned(
+              top: 150,
+              bottom: 100,
               child: Container(
+                width: 650,
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFD54F), // Κίτρινο Χρώμα
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.black45, width: 1),
+                  color: const Color(0xFFFFD54F),
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: Colors.black, width: 1.5),
                 ),
-                child: Column(
-                  children: [
-                    // Header Text
-                    Padding(
-                      padding: const EdgeInsets.all(15.0),
-                      child: Column(
-                        children: const [
-                          Text(
-                            "These recommendations",
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0D47A1)),
-                          ),
-                          Text(
-                            "will be added to your tasks:",
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0D47A1)),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Εισαγωγή στόχου
-                    if (_generatedSteps.isEmpty && !_isGenerating)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 15.0),
-                      child: TextField(
-                        controller: _controller,
-                        decoration: InputDecoration(
-                          hintText: "Enter your goal (e.g. Study Math)...",
-                          fillColor: Colors.white,
-                          filled: true,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.send, color: Colors.blue),
-                            onPressed: _generatePlan,
-                          ),
-                        ),
-                        onSubmitted: (_) => _generatePlan(),
-                      ),
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    // Loading ή Λίστα
-                    Expanded(
-                      child: _isGenerating
-                          ? const Center(child: CircularProgressIndicator(color: Colors.blue))
-                          : _generatedSteps.isEmpty
-                              ? const Center(child: Icon(Icons.edit_note, size: 60, color: Colors.black26))
-                              : ListView.builder(
-                                  padding: const EdgeInsets.symmetric(horizontal: 15),
-                                  itemCount: _generatedSteps.length,
-                                  itemBuilder: (context, index) {
-                                    return GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          _generatedSteps[index]['isSelected'] = !_generatedSteps[index]['isSelected'];
-                                        });
-                                      },
-                                      child: Container(
-                                        margin: const EdgeInsets.only(bottom: 8),
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(10),
-                                          border: Border.all(color: Colors.blue.shade300, width: 1.5),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            // Το κυκλικό checkbox
-                                            Container(
-                                              width: 16, height: 16,
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                border: Border.all(color: Colors.blue.shade900, width: 2),
-                                                color: _generatedSteps[index]['isSelected'] 
-                                                    ? Colors.blue.shade900 
-                                                    : Colors.transparent,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 10),
-                                            // Το κείμενο
-                                            Expanded(
-                                              child: Text(
-                                                _generatedSteps[index]['title'],
-                                                style: const TextStyle(fontSize: 16, color: Colors.black87),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                    ),
-
-                    // Footer Buttons (Yes / No)
-                    Padding(
-                      padding: const EdgeInsets.all(15.0),
-                      child: Column(
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator(color: Colors.black))
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            "Do you agree?",
-                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0D47A1)),
+                          // Header
+                          Text(
+                            "📋 Unplanned Tasks (${_unplannedTasks.length})",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue.shade900,
+                            ),
                           ),
-                          const SizedBox(height: 10),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              // YES Button (Green)
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF1B5E20), // Πράσινο
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                ),
-                                onPressed: _generatedSteps.isEmpty ? null : _saveSelectedTasks,
-                                child: const Text("Yes", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 16),
+
+                          // Task list / empty state
+                          Expanded(
+                            child: _unplannedTasks.isEmpty
+                                ? Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.check_circle, size: 80, color: Colors.green.shade700),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          "All tasks planned!",
+                                          style: TextStyle(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.green.shade900,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        const Text(
+                                          "No unplanned tasks to schedule",
+                                          style: TextStyle(color: Colors.black54, fontSize: 14),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : SingleChildScrollView(
+                                    child: Column(
+                                      children: [
+                                        ..._unplannedTasks.asMap().entries.map((entry) {
+                                          final idx = entry.key;
+                                          final task = entry.value;
+                                          final suggestion = _suggestions[idx];
+
+                                          return Container(
+                                            margin: const EdgeInsets.only(bottom: 16),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius: BorderRadius.circular(12),
+                                              border: Border.all(color: Colors.black, width: 1.5),
+                                            ),
+                                            padding: const EdgeInsets.all(16),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  task.title,
+                                                  style: const TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  "${task.duration}min • ${'⭐' * task.importance}",
+                                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                                                ),
+
+                                                if (suggestion != null) ...[
+                                                  const SizedBox(height: 12),
+                                                  Container(
+                                                    padding: const EdgeInsets.all(10),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.blue.shade50,
+                                                      borderRadius: BorderRadius.circular(8),
+                                                      border: Border.all(color: Colors.blue.shade300, width: 1.5),
+                                                    ),
+                                                    child: Column(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: [
+                                                        Text(
+                                                          "🤖 AI Suggestion:",
+                                                          style: TextStyle(
+                                                            fontSize: 12,
+                                                            fontWeight: FontWeight.bold,
+                                                            color: Colors.blue.shade900,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(height: 4),
+                                                        Text(
+                                                          "📅 ${suggestion['date']} at ⏰ ${suggestion['time']}",
+                                                          style: const TextStyle(
+                                                            fontSize: 13,
+                                                            fontWeight: FontWeight.w600,
+                                                          ),
+                                                        ),
+                                                        if (suggestion['reason'].isNotEmpty) ...[
+                                                          const SizedBox(height: 4),
+                                                          Text(
+                                                            suggestion['reason'],
+                                                            style: TextStyle(
+                                                              fontSize: 11,
+                                                              color: Colors.grey.shade800,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 12),
+                                                  Row(
+                                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                                    children: [
+                                                      Expanded(
+                                                        child: ElevatedButton.icon(
+                                                          onPressed: () => _acceptSuggestion(idx),
+                                                          icon: const Icon(Icons.check, size: 16),
+                                                          label: const Text("Accept", style: TextStyle(fontSize: 12)),
+                                                          style: ElevatedButton.styleFrom(
+                                                            backgroundColor: Colors.green.shade600,
+                                                            foregroundColor: Colors.white,
+                                                            shape: RoundedRectangleBorder(
+                                                              borderRadius: BorderRadius.circular(8),
+                                                            ),
+                                                            padding: const EdgeInsets.symmetric(vertical: 8),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      Expanded(
+                                                        child: ElevatedButton.icon(
+                                                          onPressed: () => _editSuggestion(idx),
+                                                          icon: const Icon(Icons.edit, size: 16),
+                                                          label: const Text("Edit", style: TextStyle(fontSize: 12)),
+                                                          style: ElevatedButton.styleFrom(
+                                                            backgroundColor: Colors.orange.shade600,
+                                                            foregroundColor: Colors.white,
+                                                            shape: RoundedRectangleBorder(
+                                                              borderRadius: BorderRadius.circular(8),
+                                                            ),
+                                                            padding: const EdgeInsets.symmetric(vertical: 8),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      Expanded(
+                                                        child: ElevatedButton.icon(
+                                                          onPressed: () => _rejectSuggestion(idx),
+                                                          icon: const Icon(Icons.close, size: 16),
+                                                          label: const Text("Reject", style: TextStyle(fontSize: 12)),
+                                                          style: ElevatedButton.styleFrom(
+                                                            backgroundColor: Colors.red.shade600,
+                                                            foregroundColor: Colors.white,
+                                                            shape: RoundedRectangleBorder(
+                                                              borderRadius: BorderRadius.circular(8),
+                                                            ),
+                                                            padding: const EdgeInsets.symmetric(vertical: 8),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                          );
+                                        }),
+                                      ],
+                                    ),
+                                  ),
+                          ),
+
+                          const SizedBox(height: 12),
+                          // Generate suggestions button (always visible at bottom)
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: (_isGenerating || _unplannedTasks.isEmpty)
+                                  ? null
+                                  : _generateSuggestions,
+                              icon: _isGenerating
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Icon(Icons.auto_fix_high),
+                              label: Text(
+                                _isGenerating ? "Generating suggestions..." : "Generate AI Suggestions",
                               ),
-                              const SizedBox(width: 40),
-                              // NO Button (Red)
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFB71C1C), // Κόκκινο
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue.shade900,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text("No", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                               ),
-                            ],
-                          )
+                            ),
+                          ),
                         ],
                       ),
-                    )
-                  ],
-                ),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 }

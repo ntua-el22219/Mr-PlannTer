@@ -5,7 +5,7 @@ class LocalStorageService {
 
   // Κρατάει το ID του calendar που δημιουργήθηκε για το Mr. PlannTer
   static const String _calendarIdKey = 'mrPlannTerCalendarId';
-  
+
   // Κρατάει τα Google credentials
   static const String _credentialsKey = 'googleCredentials';
 
@@ -20,26 +20,26 @@ class LocalStorageService {
 
   LocalStorageService._internal();
 
-  // Αρχικοποίηση 
+  // Αρχικοποίηση
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
   }
 
-  // Google Sync Toggle 
+  // Google Sync Toggle
   bool get isGoogleSyncEnabled => _prefs.getBool(_syncKey) ?? false;
 
   Future<void> setGoogleSyncEnabled(bool value) async {
     await _prefs.setBool(_syncKey, value);
   }
 
-  //  Calendar ID 
+  //  Calendar ID
   String? get calendarId => _prefs.getString(_calendarIdKey);
 
   Future<void> setCalendarId(String id) async {
     await _prefs.setString(_calendarIdKey, id);
   }
 
-  // Google Credentials 
+  // Google Credentials
   String? get googleCredentials => _prefs.getString(_credentialsKey);
 
   Future<void> setGoogleCredentials(String credentialsJson) async {
@@ -64,19 +64,27 @@ class LocalStorageService {
     await _prefs.remove('importedSongPath');
     // Reset selected song to default if it was the imported song
     final selected = _prefs.getString('selectedSong');
-    if (selected != null && !['No song', 'Lo-fi Beats', 'Classical Focus', 'Ambient Calm', 'Rain Sounds', 'Nature Sounds'].contains(selected)) {
+    if (selected != null &&
+        ![
+          'No song',
+          'Lo-fi Beats',
+          'Classical Focus',
+          'Ambient Calm',
+          'Rain Sounds',
+          'Nature Sounds',
+        ].contains(selected)) {
       await _prefs.setString('selectedSong', 'Choose a song');
     }
   }
 
-  // Connected Device 
+  // Connected Device
   String? getConnectedDevice() => _prefs.getString('connectedDevice');
 
   Future<void> setConnectedDevice(String device) async {
     await _prefs.setString('connectedDevice', device);
   }
 
-  //  Sound Enabled 
+  //  Sound Enabled
   bool get isSoundEnabled => _prefs.getBool('soundEnabled') ?? true;
 
   Future<void> setSoundEnabled(bool value) async {
@@ -84,7 +92,8 @@ class LocalStorageService {
   }
 
   // Sound Effects Enabled (Timer sound effects)
-  bool get isSoundEffectsEnabled => _prefs.getBool('soundEffectsEnabled') ?? true;
+  bool get isSoundEffectsEnabled =>
+      _prefs.getBool('soundEffectsEnabled') ?? true;
 
   Future<void> setSoundEffectsEnabled(bool value) async {
     await _prefs.setBool('soundEffectsEnabled', value);

@@ -12,12 +12,12 @@ class MainWrapperScreen extends StatefulWidget {
 }
 
 class _MainWrapperScreenState extends State<MainWrapperScreen> {
-  int _selectedIndex = 0; 
+  int _selectedIndex = 0;
 
   static const List<Widget> _widgetOptions = <Widget>[
-    MainPageScreen(),    // Index 0: Main Page
-    TodoListScreen(),    // Index 1: To-Do List
-    CalendarScreen(),    // Index 2: Calendar
+    MainPageScreen(), // Index 0: Main Page
+    TodoListScreen(), // Index 1: To-Do List
+    CalendarScreen(), // Index 2: Calendar
   ];
 
   void _onItemTapped(int index) {
@@ -34,7 +34,7 @@ class _MainWrapperScreenState extends State<MainWrapperScreen> {
         children: [
           // Main content
           _widgetOptions.elementAt(_selectedIndex),
-          
+
           // Navigation bar overlay με transparent background
           Positioned(
             bottom: 10, // Figma: bottom: 10px
@@ -87,4 +87,3 @@ class _MainWrapperScreenState extends State<MainWrapperScreen> {
     );
   }
 }
-

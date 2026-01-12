@@ -57,7 +57,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Positioned(
               top: 50,
               left: 20,
-              child: Icon(Icons.settings, size: 40, color: Colors.brown.shade900),
+              child: Icon(
+                Icons.settings,
+                size: 40,
+                color: Colors.brown.shade900,
+              ),
             ),
             Positioned(
               top: 200,
@@ -88,12 +92,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildSettingsItem(
-                      icon: _soundEffectsEnabled ? Icons.volume_up_outlined : Icons.volume_off_outlined,
+                      icon: _soundEffectsEnabled
+                          ? Icons.volume_up_outlined
+                          : Icons.volume_off_outlined,
                       label: 'Sound',
                       value: _soundEffectsEnabled ? 'On' : 'Off',
                       onTap: () {
-                        setState(() => _soundEffectsEnabled = !_soundEffectsEnabled);
-                        LocalStorageService().setSoundEffectsEnabled(_soundEffectsEnabled);
+                        setState(
+                          () => _soundEffectsEnabled = !_soundEffectsEnabled,
+                        );
+                        LocalStorageService().setSoundEffectsEnabled(
+                          _soundEffectsEnabled,
+                        );
                       },
                     ),
                     _buildSettingsItem(
@@ -105,7 +115,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _buildSettingsItem(
                       icon: Icons.bluetooth,
                       label: 'Bluetooth',
-                      value: _connectedDevice != null ? 'Connected' : 'Connect\nto\nDevice',
+                      value: _connectedDevice != null
+                          ? 'Connected'
+                          : 'Connect\nto\nDevice',
                       onTap: () => _showDeviceList(context),
                     ),
                   ],
@@ -118,8 +130,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 opacity: 0.8,
                 child: ElevatedButton.icon(
                   onPressed: () => _handleGoogleSync(context),
-                  icon: Icon(_isGoogleSyncEnabled ? Icons.sync : Icons.sync_disabled),
-                  label: Text(_isGoogleSyncEnabled ? 'Google Sync: ON' : 'Enable Google Sync'),
+                  icon: Icon(
+                    _isGoogleSyncEnabled ? Icons.sync : Icons.sync_disabled,
+                  ),
+                  label: Text(
+                    _isGoogleSyncEnabled
+                        ? 'Google Sync: ON'
+                        : 'Enable Google Sync',
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: Colors.black,
@@ -144,14 +162,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: AppTextStyles.footerInElement.copyWith(fontWeight: FontWeight.bold, color: const Color(0xFF0D47A1))),
+          Text(
+            label,
+            style: AppTextStyles.footerInElement.copyWith(
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF0D47A1),
+            ),
+          ),
           const SizedBox(height: 10),
           Icon(icon, size: 40, color: Colors.black),
           const SizedBox(height: 10),
           Text(
             value,
             textAlign: TextAlign.center,
-            style: AppTextStyles.taskHour.copyWith(fontWeight: FontWeight.bold, color: const Color(0xFF0D47A1)),
+            style: AppTextStyles.taskHour.copyWith(
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF0D47A1),
+            ),
           ),
         ],
       ),
@@ -166,7 +193,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (newState) {
       final api = await GoogleCalendarService().authenticate();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(api != null ? 'Connected to Google Calendar!' : 'Connection Failed')),
+        SnackBar(
+          content: Text(
+            api != null ? 'Connected to Google Calendar!' : 'Connection Failed',
+          ),
+        ),
       );
     }
   }
@@ -203,7 +234,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 }
 
 class PlaceholderDeviceScreen extends StatelessWidget {
-  const PlaceholderDeviceScreen({super.key, required this.onSelectDevice, required this.currentDevice});
+  const PlaceholderDeviceScreen({
+    super.key,
+    required this.onSelectDevice,
+    required this.currentDevice,
+  });
 
   final Function(String) onSelectDevice;
   final String? currentDevice;
@@ -231,7 +266,12 @@ class PlaceholderDeviceScreen extends StatelessWidget {
                       onPressed: () => Navigator.pop(context),
                     ),
                     const Spacer(),
-                    Text('Bluetooth', style: AppTextStyles.settingsHeader.copyWith(fontWeight: FontWeight.bold)),
+                    Text(
+                      'Bluetooth',
+                      style: AppTextStyles.settingsHeader.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const Spacer(),
                   ],
                 ),
@@ -245,7 +285,7 @@ class PlaceholderDeviceScreen extends StatelessWidget {
                       _buildDeviceItem(context, 'Car Audio'),
                     ],
                   ),
-                )
+                ),
               ],
             ),
           ),
@@ -286,7 +326,11 @@ class PlaceholderDeviceScreen extends StatelessWidget {
 }
 
 class PlaceholderSongsScreen extends StatefulWidget {
-  const PlaceholderSongsScreen({super.key, required this.onSelectSong, required this.currentSong});
+  const PlaceholderSongsScreen({
+    super.key,
+    required this.onSelectSong,
+    required this.currentSong,
+  });
 
   final Function(String) onSelectSong;
   final String currentSong;
@@ -312,10 +356,10 @@ class _PlaceholderSongsScreenState extends State<PlaceholderSongsScreen> {
   Future<void> _loadSongState() async {
     final storage = LocalStorageService();
     await storage.init();
-    
+
     final importedPath = storage.getImportedSongPath();
     final selectedSong = storage.getSelectedSong() ?? 'No song';
-    
+
     if (mounted) {
       setState(() {
         _nowPlaying = selectedSong;
@@ -352,7 +396,12 @@ class _PlaceholderSongsScreenState extends State<PlaceholderSongsScreen> {
                       },
                     ),
                     const Spacer(),
-                    Text('Songs', style: AppTextStyles.settingsHeader.copyWith(fontWeight: FontWeight.bold)),
+                    Text(
+                      'Songs',
+                      style: AppTextStyles.settingsHeader.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const Spacer(),
                   ],
                 ),
@@ -367,11 +416,15 @@ class _PlaceholderSongsScreenState extends State<PlaceholderSongsScreen> {
                       _buildSongItem(context, 'Rain Sounds'),
                       _buildSongItem(context, 'Nature Sounds'),
                       if (_importedSongName != null)
-                        _buildSongItem(context, _importedSongName!, isImported: true),
+                        _buildSongItem(
+                          context,
+                          _importedSongName!,
+                          isImported: true,
+                        ),
                       _buildSongItem(context, 'Import a song'),
                     ],
                   ),
-                )
+                ),
               ],
             ),
           ),
@@ -380,7 +433,11 @@ class _PlaceholderSongsScreenState extends State<PlaceholderSongsScreen> {
     );
   }
 
-  Widget _buildSongItem(BuildContext context, String name, {bool isImported = false}) {
+  Widget _buildSongItem(
+    BuildContext context,
+    String name, {
+    bool isImported = false,
+  }) {
     final bool isSelected = _nowPlaying == name;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -390,7 +447,7 @@ class _PlaceholderSongsScreenState extends State<PlaceholderSongsScreen> {
             await _importSongFromFiles(context);
           } else {
             setState(() => _nowPlaying = name);
-            
+
             // Play the song
             if (name != 'No song') {
               if (isImported && _importedSongPath != null) {
@@ -401,7 +458,7 @@ class _PlaceholderSongsScreenState extends State<PlaceholderSongsScreen> {
             } else {
               await _audioService.stopSong();
             }
-            
+
             // Update parent
             widget.onSelectSong(name);
           }
@@ -421,7 +478,9 @@ class _PlaceholderSongsScreenState extends State<PlaceholderSongsScreen> {
                   child: Text(
                     name,
                     style: AppTextStyles.footerInElement.copyWith(
-                      color: isSelected ? Colors.white : const Color(0xFF0D47A1),
+                      color: isSelected
+                          ? Colors.white
+                          : const Color(0xFF0D47A1),
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -449,22 +508,22 @@ class _PlaceholderSongsScreenState extends State<PlaceholderSongsScreen> {
     try {
       await LocalStorageService().clearImportedSong();
       await _audioService.stopSong();
-      
+
       setState(() {
         _nowPlaying = 'No song';
         _importedSongName = null;
         _importedSongPath = null;
       });
-      
+
       widget.onSelectSong('No song');
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Imported song removed')),
-      );
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Imported song removed')));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error removing song: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error removing song: $e')));
     }
   }
 
@@ -478,31 +537,31 @@ class _PlaceholderSongsScreenState extends State<PlaceholderSongsScreen> {
       if (result != null && result.files.single.path != null) {
         String filePath = result.files.single.path!;
         String fileName = result.files.single.name;
-        
+
         setState(() {
           _nowPlaying = fileName;
           _importedSongName = fileName;
           _importedSongPath = filePath;
         });
-        
+
         // Store imported song info
         await LocalStorageService().setSelectedSong(fileName);
         await LocalStorageService().setImportedSongPath(filePath);
-        
+
         // Play the imported song immediately
         await _audioService.playSong(filePath);
-        
+
         // Notify parent
         widget.onSelectSong(fileName);
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Imported and playing: $fileName')),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error importing file: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error importing file: $e')));
     }
   }
 }

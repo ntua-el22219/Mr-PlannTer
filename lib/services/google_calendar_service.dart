@@ -8,7 +8,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import '../data/local_storage_service.dart';
 
-
 // Load credentials from environment variables (secure approach)
 // Create a .env file in project root with:
 // GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com
@@ -37,7 +36,8 @@ class GoogleCalendarService {
   gcal.CalendarApi? _calendarApi;
 
   // Singleton pattern
-  static final GoogleCalendarService _instance = GoogleCalendarService._internal();
+  static final GoogleCalendarService _instance =
+      GoogleCalendarService._internal();
 
   factory GoogleCalendarService() {
     return _instance;
@@ -48,7 +48,6 @@ class GoogleCalendarService {
   // Επιστρέφει true αν ο χρήστης είναι συνδεδεμένος και το token είναι έγκυρο
   bool get isAuthenticated => _calendarApi != null;
 
-  
   // Χειρίζεται τον έλεγχο ταυτότητας
   Future<gcal.CalendarApi?> authenticate() async {
     // Δοκιμάζουμε να φορτώσουμε αποθηκευμένα credentials
@@ -56,8 +55,9 @@ class GoogleCalendarService {
     if (storedCredentials != null) {
       try {
         final Map<String, dynamic> json = jsonDecode(storedCredentials);
-        final auth.AccessCredentials credentials = auth.AccessCredentials.fromJson(json);
-        
+        final auth.AccessCredentials credentials =
+            auth.AccessCredentials.fromJson(json);
+
         // Ελέγχουμε αν το token έχει λήξει
         if (credentials.accessToken.expiry.isAfter(DateTime.now())) {
           _calendarApi = await _getCalendarApiFromCredentials(credentials);
@@ -68,7 +68,7 @@ class GoogleCalendarService {
         await _localStorage.clearGoogleCredentials();
       }
     }
-    
+
     //  Αν δεν υπάρχουν, ξεκινάμε νέο OAuth flow
     return await _startOAuthFlow();
   }
@@ -76,12 +76,12 @@ class GoogleCalendarService {
   // Ξεκινάει τη διαδικασία σύνδεσης μέσω browser
   Future<gcal.CalendarApi?> _startOAuthFlow() async {
     if (_clientId.isEmpty || _clientSecret.isEmpty) {
-        if (kDebugMode) print("ERROR: Google Client ID/Secret not set.");
-        return null;
+      if (kDebugMode) print("ERROR: Google Client ID/Secret not set.");
+      return null;
     }
 
     final auth.ClientId clientId = auth.ClientId(_clientId, _clientSecret);
-    
+
     // Αυτό το flow ανοίγει ένα παράθυρο browser για τον χρήστη
     try {
       final auth.AuthClient client = await auth.clientViaUserConsent(
@@ -96,9 +96,11 @@ class GoogleCalendarService {
           }
         },
       );
-      
+
       // Αποθηκεύουμε τα credentials για μελλοντική χρήση
-      _localStorage.setGoogleCredentials(jsonEncode(client.credentials.toJson()));
+      _localStorage.setGoogleCredentials(
+        jsonEncode(client.credentials.toJson()),
+      );
       _calendarApi = gcal.CalendarApi(client);
       return _calendarApi;
     } catch (e) {
@@ -107,20 +109,18 @@ class GoogleCalendarService {
     }
   }
 
-  Future<gcal.CalendarApi?> _getCalendarApiFromCredentials(auth.AccessCredentials credentials) async {
+  Future<gcal.CalendarApi?> _getCalendarApiFromCredentials(
+    auth.AccessCredentials credentials,
+  ) async {
     final httpClient = http.Client();
-    final client = auth.authenticatedClient(
-      httpClient,
-      credentials,
-    );
+    final client = auth.authenticatedClient(httpClient, credentials);
     return gcal.CalendarApi(client);
   }
-
 
   // Βρίσκει ή δημιουργεί το ειδικό calendar για την εφαρμογή μας
   Future<String?> getOrCreateMrPlannTerCalendar() async {
     if (_calendarApi == null) return null;
-    
+
     // Έλεγχος αν υπάρχει ήδη αποθηκευμένο ID
     final storedId = _localStorage.calendarId;
     if (storedId != null) {
@@ -133,10 +133,12 @@ class GoogleCalendarService {
         await _localStorage.setCalendarId('');
       }
     }
-    
+
     //  Δημιουργία νέου calendar
     try {
-      final newCalendar = gcal.Calendar(summary: 'Mr PlannTer Sessions & Deadlines');
+      final newCalendar = gcal.Calendar(
+        summary: 'Mr PlannTer Sessions & Deadlines',
+      );
       final createdCalendar = await _calendarApi!.calendars.insert(newCalendar);
       final newId = createdCalendar.id!;
       await _localStorage.setCalendarId(newId);
@@ -147,21 +149,20 @@ class GoogleCalendarService {
     }
   }
 
-
-
   Future<String?> createCalendarEvent({
     required String title,
     required DateTime startTime,
     required Duration duration,
     String? description,
+    String? recurrenceRule,
   }) async {
     if (_calendarApi == null) return null;
-    
+
     final calendarId = await getOrCreateMrPlannTerCalendar();
     if (calendarId == null) return null;
 
     final endTime = startTime.add(duration);
-    
+
     final event = gcal.Event(
       summary: title,
       start: gcal.EventDateTime(dateTime: startTime, timeZone: 'Europe/Athens'),
@@ -169,9 +170,19 @@ class GoogleCalendarService {
       description: description ?? 'Automatically synced from Mr PlannTer app.',
     );
 
+    // Add recurrence rule if provided (Google Calendar uses RRULE format)
+    if (recurrenceRule != null &&
+        recurrenceRule.isNotEmpty &&
+        recurrenceRule != 'NONE') {
+      event.recurrence = ['RRULE:$recurrenceRule'];
+    }
+
     try {
       final createdEvent = await _calendarApi!.events.insert(event, calendarId);
-      if (kDebugMode) print('Event "$title" created successfully with ID: ${createdEvent.id}');
+      if (kDebugMode)
+        print(
+          'Event "$title" created successfully with ID: ${createdEvent.id}',
+        );
       return createdEvent.id; // Return the event ID
     } catch (e) {
       if (kDebugMode) print('Failed to create event: $e');
@@ -182,7 +193,7 @@ class GoogleCalendarService {
   // Update or delete an event by ID
   Future<bool> deleteCalendarEvent(String eventId) async {
     if (_calendarApi == null) return false;
-    
+
     final calendarId = await getOrCreateMrPlannTerCalendar();
     if (calendarId == null) return false;
 
@@ -203,7 +214,7 @@ class GoogleCalendarService {
     String? calendarId,
   }) async {
     if (_calendarApi == null) return [];
-    
+
     // Use primary calendar if no specific calendar is provided
     final targetCalendarId = calendarId ?? 'primary';
 
@@ -215,8 +226,11 @@ class GoogleCalendarService {
         singleEvents: true,
         orderBy: 'startTime',
       );
-      
-      if (kDebugMode) print('Fetched ${events.items?.length ?? 0} events from Google Calendar ($targetCalendarId)');
+
+      if (kDebugMode)
+        print(
+          'Fetched ${events.items?.length ?? 0} events from Google Calendar ($targetCalendarId)',
+        );
       return events.items ?? [];
     } catch (e) {
       if (kDebugMode) print('Failed to fetch events: $e');
