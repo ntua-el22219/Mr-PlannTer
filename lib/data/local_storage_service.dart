@@ -104,4 +104,14 @@ class LocalStorageService {
     await _prefs.remove(_calendarIdKey);
     await _prefs.remove(_syncKey);
   }
+
+  // Selected Flower Color (for plant album)
+  static const String _selectedFlowerColorKey = 'selectedFlowerColor';
+
+  String get selectedFlowerColor =>
+      _prefs.getString(_selectedFlowerColorKey) ?? 'DEFAULT';
+
+  Future<void> setSelectedFlowerColor(String color) async {
+    await _prefs.setString(_selectedFlowerColorKey, color);
+  }
 }

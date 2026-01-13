@@ -88,10 +88,16 @@ class GoogleCalendarService {
         clientId,
         _scopes,
         (url) async {
+          if (kDebugMode) print('OAuth URL: $url');
           final uri = Uri.parse(url);
           if (await canLaunchUrl(uri)) {
-            await launchUrl(uri);
+            // Force browser launch mode to ensure redirect works
+            await launchUrl(
+              uri,
+              mode: LaunchMode.externalApplication,
+            );
           } else {
+            if (kDebugMode) print('Could not launch URL: $url');
             throw 'Could not launch $url';
           }
         },

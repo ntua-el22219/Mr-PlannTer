@@ -191,14 +191,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await LocalStorageService().setGoogleSyncEnabled(newState);
 
     if (newState) {
-      final api = await GoogleCalendarService().authenticate();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            api != null ? 'Connected to Google Calendar!' : 'Connection Failed',
+      try {
+        final api = await GoogleCalendarService().authenticate();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              api != null ? 'Connected to Google Calendar!' : 'Connection Failed - Check logs for details',
+            ),
+            backgroundColor: api != null ? Colors.green : Colors.red,
           ),
-        ),
-      );
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Authentication error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        debugPrint('Google Calendar authentication error: $e');
+      }
     }
   }
 
