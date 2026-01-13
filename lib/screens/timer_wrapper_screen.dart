@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
 import '../data/database_helper.dart'; // Για αποθήκευση στο τέλος
 import '../data/local_storage_service.dart';
+import '../data/flower_colors.dart';
 import '../services/audio_service.dart';
 import '../widgets/cloudy_background.dart';
 import '../theme/text_styles.dart';
@@ -114,6 +115,18 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
     'assets/images/plant_level5.svg',
     'assets/images/plant_level6.svg',
   ];
+
+  // Get the appropriate plant image based on level and selected flower color
+  String _getPlantImagePath(int level) {
+    if (level >= 4 && level <= 6) {
+      // For levels 4-6, use the selected flower color
+      final selectedColorKey = _storageService.selectedFlowerColor;
+      final flowerColor = FlowerColors.getByKey(selectedColorKey);
+      return flowerColor.getImagePath(level);
+    }
+    // For levels 0-3, use default plant stages
+    return _plantStages[level];
+  }
   final String _potPath = 'assets/images/happy_pot.svg';
   final String _grassPath = 'assets/images/grass.svg';
 
@@ -1373,7 +1386,7 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
               left: plantLeft,
               bottom: plantBottom,
               child: SvgPicture.asset(
-                _plantStages[_currentPlantState],
+                _getPlantImagePath(_currentPlantState),
                 height: plantHeight,
                 width: plantWidth,
                 fit: BoxFit.contain,

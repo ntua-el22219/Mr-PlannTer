@@ -4,6 +4,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'settings_screen.dart';
 import 'plants_album_screen.dart';
 import 'timer_wrapper_screen.dart';
+import '../data/local_storage_service.dart';
+import '../data/flower_colors.dart';
 import '../widgets/cloudy_background.dart';
 import '../widgets/mr_watering_can.dart';
 
@@ -22,11 +24,20 @@ class _MainPageScreenState extends State<MainPageScreen>
   late Animation<double> _scaleAnimation;
   late Animation<double> _glowAnimation;
 
+  final LocalStorageService _storageService = LocalStorageService();
+
   // PATHS ASSETS
-  final String _plantImagePath = 'assets/images/plant_level6.svg';
   final String _albumImagePath = 'assets/images/plants_calendar_album.svg';
   final String _potImagePath = 'assets/images/pot_normal.svg';
   final String _grassImagePath = 'assets/images/grass.svg';
+
+  // Get the plant image path based on selected flower color
+  String get _plantImagePath {
+    final selectedColorKey = _storageService.selectedFlowerColor;
+    final flowerColor = FlowerColors.getByKey(selectedColorKey);
+    // Always show level 6 on main page
+    return flowerColor.level6ImagePath;
+  }
 
   @override
   void initState() {
