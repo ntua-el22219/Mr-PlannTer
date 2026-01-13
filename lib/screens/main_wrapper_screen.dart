@@ -26,14 +26,41 @@ class _MainWrapperScreenState extends State<MainWrapperScreen> {
     });
   }
 
+  void _handleSwipeLeft() {
+    if (_selectedIndex < 2) {
+      setState(() => _selectedIndex++);
+    }
+  }
+
+  void _handleSwipeRight() {
+    if (_selectedIndex > 0) {
+      setState(() => _selectedIndex--);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Stack(
-        children: [
-          // Main content
-          _widgetOptions.elementAt(_selectedIndex),
+      body: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onHorizontalDragEnd: (details) {
+          // Check if velocity is significant enough
+          final velocity = details.primaryVelocity ?? 0;
+          if (velocity.abs() > 100) {
+            if (velocity < 0) {
+              // Swiped left
+              _handleSwipeLeft();
+            } else {
+              // Swiped right
+              _handleSwipeRight();
+            }
+          }
+        },
+        child: Stack(
+          children: [
+            // Main content
+            _widgetOptions.elementAt(_selectedIndex),
 
           // Navigation bar overlay με transparent background
           Positioned(
@@ -71,6 +98,7 @@ class _MainWrapperScreenState extends State<MainWrapperScreen> {
           ),
         ],
       ),
+        ),
     );
   }
 
