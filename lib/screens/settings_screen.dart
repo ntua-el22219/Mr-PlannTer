@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:android_intent_plus/android_intent.dart';
 
 import '../data/local_storage_service.dart';
-import '../services/google_calendar_service.dart';
 import '../services/audio_service.dart';
 import '../widgets/cloudy_background.dart';
 import '../theme/text_styles.dart';
@@ -14,71 +16,104 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
-  bool _isGoogleSyncEnabled = false;
+class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObserver {
   bool _soundEffectsEnabled = true;
   String _selectedSong = 'No song';
-  String? _connectedDevice;
+  bool _bluetoothEnabled = false;
+  
+  static const platform = MethodChannel('com.example.app_mr_plannter/bluetooth');
 
   @override
   void initState() {
     super.initState();
-    _initializeSettings();
+    WidgetsBinding.instance.addObserver(this);
+    _loadSettings();
+    _initBluetooth();
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _loadSettings();
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
-  Future<void> _initializeSettings() async {
-    await LocalStorageService().init();
-    _loadSettings();
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadSettings();
+    }
   }
 
-  Future<void> _loadSettings() async {
+  void _loadSettings() {
     final storage = LocalStorageService();
     setState(() {
       _selectedSong = storage.getSelectedSong() ?? 'No song';
-      _connectedDevice = storage.getConnectedDevice();
-      _isGoogleSyncEnabled = storage.isGoogleSyncEnabled;
       _soundEffectsEnabled = storage.isSoundEffectsEnabled;
     });
+  }
+
+  void _initBluetooth() {
+    try {
+      FlutterBluePlus.adapterState.listen((state) {
+        if (mounted) {
+          setState(() {
+            _bluetoothEnabled = state == BluetoothAdapterState.on;
+          });
+        }
+      });
+    } catch (e) {
+      debugPrint('Error initializing Bluetooth: $e');
+    }
+  }
+
+  Future<void> _handleBluetoothTap() async {
+    try {
+      if (!_bluetoothEnabled) {
+        await FlutterBluePlus.turnOn();
+      }
+      _openBluetoothSettings();
+    } catch (e) {
+      debugPrint('Error handling Bluetooth: $e');
+    }
+  }
+
+  void _openBluetoothSettings() {
+    const intent = AndroidIntent(
+      action: 'android.intent.action.MAIN',
+      flags: <int>[268435456], // FLAG_ACTIVITY_NEW_TASK = 0x10000000
+      package: 'com.android.settings',
+      componentName: 'com.android.settings.bluetooth.BluetoothSettings',
+    );
+    intent.launch();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: CloudyAnimatedBackground(
-        child: Stack(
-          alignment: Alignment.topCenter,
-          children: [
-            Positioned(
-              top: 50,
-              left: 20,
-              child: Icon(
-                Icons.settings,
-                size: 40,
-                color: Colors.brown.shade900,
-              ),
-            ),
-            Positioned(
-              top: 200,
-              child: GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  padding: const EdgeInsets.all(5),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.black, width: 3),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final double scale = (constraints.maxHeight / 917.0).clamp(0.7, 1.4);
+
+            return Stack(
+              alignment: Alignment.topCenter,
+              children: [
+                Positioned(
+                  top: 200,
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.black, width: 3),
+                      ),
+                      child: const Icon(Icons.close, size: 40, color: Colors.black),
+                    ),
                   ),
-                  child: const Icon(Icons.close, size: 40, color: Colors.black),
                 ),
-              ),
-            ),
-            Positioned(
-              top: 280,
+                Positioned(
+                  top: 280,
               child: Container(
                 width: 320,
                 padding: const EdgeInsets.all(20),
@@ -97,11 +132,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           : Icons.volume_off_outlined,
                       label: 'Sound',
                       value: _soundEffectsEnabled ? 'On' : 'Off',
-                      onTap: () {
+                      onTap: () async {
                         setState(
                           () => _soundEffectsEnabled = !_soundEffectsEnabled,
                         );
-                        LocalStorageService().setSoundEffectsEnabled(
+                        await LocalStorageService().setSoundEffectsEnabled(
                           _soundEffectsEnabled,
                         );
                       },
@@ -113,39 +148,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onTap: () => _showSongsList(context),
                     ),
                     _buildSettingsItem(
-                      icon: Icons.bluetooth,
+                      icon: _bluetoothEnabled ? Icons.bluetooth_connected : Icons.bluetooth,
                       label: 'Bluetooth',
-                      value: _connectedDevice != null
-                          ? 'Connected'
-                          : 'Connect\nto\nDevice',
-                      onTap: () => _showDeviceList(context),
+                      value: _bluetoothEnabled ? 'Enabled' : 'Disabled',
+                      onTap: _handleBluetoothTap,
+                      isActive: _bluetoothEnabled,
                     ),
                   ],
                 ),
               ),
             ),
-            Positioned(
-              bottom: 50,
-              child: Opacity(
-                opacity: 0.8,
-                child: ElevatedButton.icon(
-                  onPressed: () => _handleGoogleSync(context),
-                  icon: Icon(
-                    _isGoogleSyncEnabled ? Icons.sync : Icons.sync_disabled,
-                  ),
-                  label: Text(
-                    _isGoogleSyncEnabled
-                        ? 'Google Sync: ON'
-                        : 'Enable Google Sync',
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
-                  ),
-                ),
-              ),
-            ),
-          ],
+
+              ],
+            );
+          },
         ),
       ),
     );
@@ -156,6 +172,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required String label,
     required String value,
     required VoidCallback onTap,
+    bool isActive = false,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -170,7 +187,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          Icon(icon, size: 40, color: Colors.black),
+          Stack(
+            children: [
+              Icon(icon, size: 40, color: Colors.black),
+              if (isActive)
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                  ),
+                ),
+            ],
+          ),
           const SizedBox(height: 10),
           Text(
             value,
@@ -185,48 +220,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Future<void> _handleGoogleSync(BuildContext context) async {
-    final newState = !_isGoogleSyncEnabled;
-    setState(() => _isGoogleSyncEnabled = newState);
-    await LocalStorageService().setGoogleSyncEnabled(newState);
 
-    if (newState) {
-      try {
-        final api = await GoogleCalendarService().authenticate();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              api != null ? 'Connected to Google Calendar!' : 'Connection Failed - Check logs for details',
-            ),
-            backgroundColor: api != null ? Colors.green : Colors.red,
-          ),
-        );
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Authentication error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        debugPrint('Google Calendar authentication error: $e');
-      }
-    }
-  }
 
-  void _showDeviceList(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (c) => PlaceholderDeviceScreen(
-          onSelectDevice: (device) {
-            setState(() => _connectedDevice = device);
-            LocalStorageService().setConnectedDevice(device);
-          },
-          currentDevice: _connectedDevice,
-        ),
-      ),
-    );
-  }
+
 
   void _showSongsList(BuildContext context) {
     Navigator.push(
@@ -244,97 +240,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-class PlaceholderDeviceScreen extends StatelessWidget {
-  const PlaceholderDeviceScreen({
-    super.key,
-    required this.onSelectDevice,
-    required this.currentDevice,
-  });
 
-  final Function(String) onSelectDevice;
-  final String? currentDevice;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: CloudyAnimatedBackground(
-        child: Center(
-          child: Container(
-            width: 300,
-            height: 400,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFD54F),
-              borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: Colors.black, width: 1.5),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.black),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    const Spacer(),
-                    Text(
-                      'Bluetooth',
-                      style: AppTextStyles.settingsHeader.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Spacer(),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Expanded(
-                  child: ListView(
-                    children: [
-                      _buildDeviceItem(context, 'Headphones'),
-                      _buildDeviceItem(context, 'Speaker'),
-                      _buildDeviceItem(context, 'Smartwatch'),
-                      _buildDeviceItem(context, 'Car Audio'),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDeviceItem(BuildContext context, String name) {
-    final bool isConnected = currentDevice == name;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: GestureDetector(
-        onTap: () {
-          onSelectDevice(name);
-          Navigator.pop(context);
-        },
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: isConnected ? Colors.green : Colors.transparent,
-            border: Border.all(color: const Color(0xFF0D47A1)),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Center(
-            child: Text(
-              name,
-              style: AppTextStyles.footerInElement.copyWith(
-                color: isConnected ? Colors.white : const Color(0xFF0D47A1),
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class PlaceholderSongsScreen extends StatefulWidget {
   const PlaceholderSongsScreen({
@@ -361,22 +267,27 @@ class _PlaceholderSongsScreenState extends State<PlaceholderSongsScreen> {
     super.initState();
     _audioService = AudioService();
     _nowPlaying = widget.currentSong;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     _loadSongState();
   }
 
   Future<void> _loadSongState() async {
     final storage = LocalStorageService();
-    await storage.init();
 
     final importedPath = storage.getImportedSongPath();
+    final importedName = storage.getImportedSongName();
     final selectedSong = storage.getSelectedSong() ?? 'No song';
 
     if (mounted) {
       setState(() {
         _nowPlaying = selectedSong;
-        if (importedPath != null && importedPath.isNotEmpty) {
+        if (importedPath != null && importedPath.isNotEmpty && importedName != null) {
           _importedSongPath = importedPath;
-          _importedSongName = selectedSong;
+          _importedSongName = importedName;
         }
       });
     }
@@ -558,6 +469,7 @@ class _PlaceholderSongsScreenState extends State<PlaceholderSongsScreen> {
         // Store imported song info
         await LocalStorageService().setSelectedSong(fileName);
         await LocalStorageService().setImportedSongPath(filePath);
+        await LocalStorageService().setImportedSongName(fileName);
 
         // Play the imported song immediately
         await _audioService.playSong(filePath);

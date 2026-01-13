@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../data/database_helper.dart';
 import '../data/task_model.dart';
 import '../widgets/cloudy_background.dart';
+import '../widgets/animated_settings_button.dart';
 import 'settings_screen.dart';
 import 'new_task_screen.dart';
 import 'ai_planner_screen.dart';
@@ -308,24 +309,18 @@ class _TodoListScreenState extends State<TodoListScreen> {
                   ),
                 ),
                 // Settings Icon (same as main page)
-                Positioned(
+                AnimatedSettingsButton(
                   top: settingsTop,
                   left: settingsLeft,
-                  child: IconButton(
-                    icon: Icon(
-                      Icons.settings,
-                      size: settingsSize,
-                      color: Colors.black,
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (c) => const SettingsScreen(),
-                        ),
-                      );
-                    },
-                  ),
+                  size: settingsSize,
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (c) => const SettingsScreen(),
+                      ),
+                    );
+                  },
                 ),
               ],
             );

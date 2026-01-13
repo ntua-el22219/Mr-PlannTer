@@ -1,3 +1,4 @@
+import '../theme/importance_colors.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../theme/text_styles.dart';
@@ -5,6 +6,7 @@ import 'package:table_calendar/table_calendar.dart';
 import 'settings_screen.dart';
 import 'new_task_screen.dart';
 import '../widgets/cloudy_background.dart';
+import '../widgets/animated_settings_button.dart';
 import '../data/database_helper.dart';
 import '../data/task_model.dart';
 import '../data/recurrence_helper.dart';
@@ -170,24 +172,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     ],
                   ),
                   // Settings Icon (same as main page)
-                  Positioned(
+                  AnimatedSettingsButton(
                     top: settingsTop,
                     left: settingsLeft,
-                    child: IconButton(
-                      icon: Icon(
-                        Icons.settings,
-                        size: settingsSize,
-                        color: Colors.black,
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (c) => const SettingsScreen(),
-                          ),
-                        );
-                      },
-                    ),
+                    size: settingsSize,
+                    onTap: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (c) => const SettingsScreen(),
+                        ),
+                      );
+                    },
                   ),
                 ],
               );
@@ -512,15 +508,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildTaskCard(Task task) {
-    final isDeadline = task.type == 'deadline';
-
-    // Use custom color if set, otherwise default colors
-    final defaultBackgroundColor = isDeadline
-        ? const Color(0xFFD4BBA8)
-        : const Color(0xFFC5D9F0);
-    final backgroundColor = task.colorValue != null
-        ? Color(task.colorValue!)
-        : defaultBackgroundColor;
+    // Use importance-based color
+    final backgroundColor = getImportanceColor(
+      type: task.type,
+      importance: task.importance,
+    );
 
     // Parse time
     final timeParts = task.scheduledTime.split(':');
@@ -569,7 +561,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             const SizedBox(height: 12),
 
             // Time info
-            if (isDeadline)
+            if (task.type == 'deadline')
               Align(
                 alignment: Alignment.centerRight,
                 child: Column(
@@ -1101,8 +1093,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Expanded(
             flex: 2,
             child: Wrap(
-              spacing: 12,
-              runSpacing: 12,
+              spacing: 10,
+              runSpacing: 10,
               children: timeSlots.map((slot) {
                 final slotTasks = tasks.where((t) {
                   final parsed = _parseTimeOfDay(t.scheduledTime);
@@ -1111,8 +1103,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       parsed.minute == slot.minute;
                 }).toList();
 
+                final hasTasksAtSlot = slotTasks.isNotEmpty;
+
                 return Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
                       _formatTimeOfDay(slot),
@@ -1123,53 +1118,77 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    GestureDetector(
-                      onTap: () => _showAddOptionsForSlot(date, slot),
-                      child: Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: backgroundColor.withOpacity(0.5),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.black.withOpacity(0.3),
-                            width: 1.5,
+                    // Show + button only if no tasks at this slot
+                    if (!hasTasksAtSlot)
+                      GestureDetector(
+                        onTap: () => _showAddOptionsForSlot(date, slot),
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.8),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.black.withOpacity(0.25),
+                              width: 2,
+                            ),
                           ),
-                        ),
-                        child: const Icon(
-                          Icons.add,
-                          size: 18,
-                          color: Colors.black,
+                          child: const Icon(
+                            Icons.add,
+                            size: 20,
+                            color: Colors.black54,
+                          ),
                         ),
                       ),
-                    ),
-                    if (slotTasks.isNotEmpty) ...[
-                      const SizedBox(height: 6),
+                    // Show tasks as rounded rectangles with full text
+                    if (hasTasksAtSlot) ...[
                       ...slotTasks.map((task) {
-                        return Container(
-                          margin: const EdgeInsets.only(top: 4),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.85),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
+                        return GestureDetector(
+                          onTap: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (c) => NewTaskScreen(
+                                  initialType: task.type,
+                                  existingTask: task,
+                                ),
+                              ),
+                            );
+                            if (result == true) _loadTasks();
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.only(top: 4),
+                            padding: const EdgeInsets.all(8),
+                            constraints: const BoxConstraints(
+                              minWidth: 70,
+                              maxWidth: 110,
+                            ),
+                            decoration: BoxDecoration(
                               color: task.type == 'deadline'
-                                  ? Colors.red
-                                  : Colors.blue,
-                              width: 1.5,
+                                  ? const Color(0xFFFFE5E5)
+                                  : const Color(0xFFE5F2FF),
+                              borderRadius: BorderRadius.circular(15),
+                              border: Border.all(
+                                color: task.type == 'deadline'
+                                    ? const Color(0xFFFF4444)
+                                    : const Color(0xFF4488FF),
+                                width: 2,
+                              ),
                             ),
-                          ),
-                          child: Text(
-                            task.title,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
+                            child: Text(
+                              task.title,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: task.type == 'deadline'
+                                    ? const Color(0xFFCC0000)
+                                    : const Color(0xFF0055CC),
+                                height: 1.2,
+                              ),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
                             ),
-                            overflow: TextOverflow.ellipsis,
                           ),
                         );
                       }),
@@ -1397,11 +1416,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildCalendarTaskCard(Task task) {
-    final color = task.colorValue != null
-        ? Color(task.colorValue!)
-        : (task.type == 'deadline'
-              ? const Color(0xFFD4BBA8)
-              : const Color(0xFFC5D9F0));
+    final color = getImportanceColor(
+      type: task.type,
+      importance: task.importance,
+    );
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -1463,7 +1481,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   color: Colors.black,
                 ),
               ),
-              if (task.duration > 0) ...[
+              if (task.type != 'deadline' && task.duration > 0) ...[
                 const SizedBox(height: 4),
                 Container(
                   padding: const EdgeInsets.symmetric(

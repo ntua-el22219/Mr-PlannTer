@@ -1,3 +1,4 @@
+import '../theme/importance_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../data/task_model.dart';
@@ -188,11 +189,10 @@ class _CalendarViewWidgetState extends State<CalendarViewWidget> {
   }
 
   Widget _buildCalendarTaskCard(Task task) {
-    final color = task.colorValue != null
-        ? Color(task.colorValue!)
-        : (task.type == 'deadline'
-            ? const Color(0xFFD4BBA8)
-            : const Color(0xFFC5D9F0));
+    final color = getImportanceColor(
+      type: task.type,
+      importance: task.importance,
+    );
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
