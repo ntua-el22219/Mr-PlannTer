@@ -175,13 +175,13 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
         ).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 40,
       ),
-      TweenSequenceItem(tween: ConstantTween<double>(1.15), weight: 20),
+      TweenSequenceItem(tween: ConstantTween<double>(1.15), weight: 10),
       TweenSequenceItem(
         tween: Tween<double>(
           begin: 1.15,
           end: 1.0,
         ).chain(CurveTween(curve: Curves.easeInOut)),
-        weight: 40,
+        weight: 60,
       ),
     ]).animate(_wateringCanScaleController);
 
@@ -193,13 +193,13 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
         ).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 40,
       ),
-      TweenSequenceItem(tween: ConstantTween<double>(0.8), weight: 20),
+      TweenSequenceItem(tween: ConstantTween<double>(0.8), weight: 10),
       TweenSequenceItem(
         tween: Tween<double>(
           begin: 0.8,
           end: 0.0,
         ).chain(CurveTween(curve: Curves.easeInOut)),
-        weight: 40,
+        weight: 60,
       ),
     ]).animate(_wateringCanScaleController);
   }
@@ -430,7 +430,16 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
   void _stopTimer() {
     _timer?.cancel();
     setState(() {
-      _phase = TimerPhase.setup;
+      // Restart the current timer to its original duration
+      if (_phase == TimerPhase.studying) {
+        _secondsRemaining = _studyTimeTotalSeconds;
+        // Undo plant progress from current session
+        _totalStudyTimeElapsed = (_currentSession - 1) * _studyTimeTotalSeconds;
+        int stage = (_totalStudyTimeElapsed / _secondsPerGrowthStage).floor();
+        _currentPlantState = stage.clamp(0, 6);
+      } else if (_phase == TimerPhase.breaking) {
+        _secondsRemaining = _breakTimeTotalSeconds;
+      }
       _isRunning = false;
     });
   }
@@ -549,6 +558,8 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
                       boxRight: 0.7762,
                       boxBottom: 0.0982,
                       controller: _studyMin1Controller,
+                      additionalRightOffset: -0.05,
+                      maxValue: 5,
                     ),
                     // Box 2 (M2): inset [8.47%, 54.93%, 9.82%, 26.39%]
                     _buildDigitBox(
@@ -563,6 +574,8 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
                       boxRight: 0.5493,
                       boxBottom: 0.0982,
                       controller: _studyMin2Controller,
+                      additionalRightOffset: -0.03,
+                      maxValue: 9,
                     ),
                     // Box 3 (S1): inset [8.47%, 27.16%, 9.82%, 54.17%]
                     _buildDigitBox(
@@ -577,6 +590,7 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
                       boxRight: 0.2716,
                       boxBottom: 0.0982,
                       controller: _studySec1Controller,
+                      maxValue: 5,
                     ),
                     // Box 4 (S2): inset [8.47%, 4.47%, 9.82%, 76.85%]
                     _buildDigitBox(
@@ -591,6 +605,8 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
                       boxRight: 0.0447,
                       boxBottom: 0.0982,
                       controller: _studySec2Controller,
+                      additionalRightOffset: 0.02,
+                      maxValue: 9,
                     ),
 
                     // Break time - 4 individual boxes for M M : S S
@@ -607,6 +623,8 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
                       boxRight: 0.7762,
                       boxBottom: 0.0982,
                       controller: _breakMin1Controller,
+                      additionalRightOffset: -0.05,
+                      maxValue: 5,
                     ),
                     _buildDigitBox(
                       containerWidth,
@@ -620,6 +638,8 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
                       boxRight: 0.5493,
                       boxBottom: 0.0982,
                       controller: _breakMin2Controller,
+                      additionalRightOffset: -0.03,
+                      maxValue: 9,
                     ),
                     _buildDigitBox(
                       containerWidth,
@@ -633,6 +653,8 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
                       boxRight: 0.2716,
                       boxBottom: 0.0982,
                       controller: _breakSec1Controller,
+                      additionalRightOffset: 0.01,
+                      maxValue: 5,
                     ),
                     _buildDigitBox(
                       containerWidth,
@@ -646,6 +668,9 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
                       boxRight: 0.0447,
                       boxBottom: 0.0982,
                       controller: _breakSec2Controller,
+                      additionalRightOffset: 0.02,
+                      maxValue: 9,
+
                     ),
 
                     // Sessions box: inset [83.61%, 42.47%, 4.77%, 42.59%]
@@ -654,21 +679,27 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
                       left: containerWidth * 0.4259,
                       right: containerWidth * 0.4247,
                       bottom: containerHeight * 0.0477,
-                      child: TextField(
-                        controller: _sessionsController,
-                        keyboardType: TextInputType.number,
-                        textAlign: TextAlign.center,
-                        maxLength: 1,
-                        style: const TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E90FF),
+                      child: GestureDetector(
+                        onTap: () => _showNumberPickerBottomSheet(
+                          context,
+                          _sessionsController,
+                          maxValue: 9,
                         ),
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          counterText: '',
-                          contentPadding: EdgeInsets.zero,
-                          filled: false,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Center(
+                            child: Text(
+                              _sessionsController.text.isEmpty ? '0' : _sessionsController.text,
+                              style: const TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1E90FF),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -731,6 +762,8 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
     required double boxRight,
     required double boxBottom,
     required TextEditingController controller,
+    double additionalRightOffset = 0,
+    int maxValue = 9,
   }) {
     // Calculate timer area dimensions
     final timerTopPx = containerHeight * timerTop;
@@ -738,10 +771,10 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
     final timerWidth = containerWidth * (1 - timerLeft - timerRight);
     final timerHeight = containerHeight * (1 - timerTop - timerBottom);
 
-    // Calculate box position within timer area
+    // Calculate box position within timer area (shift right by ~6% + additional offset)
     final boxTopPx = timerHeight * boxTop;
-    final boxLeftPx = timerWidth * boxLeft;
-    final boxWidth = timerWidth * (1 - boxLeft - boxRight);
+    final boxLeftPx = timerWidth * (boxLeft + 0.06 + additionalRightOffset);
+    final boxWidth = timerWidth * (1 - (boxLeft + 0.06 + additionalRightOffset) - boxRight);
     final boxHeight = timerHeight * (1 - boxTop - boxBottom);
 
     return Positioned(
@@ -749,21 +782,27 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
       left: timerLeftPx + boxLeftPx,
       width: boxWidth,
       height: boxHeight,
-      child: TextField(
-        controller: controller,
-        keyboardType: TextInputType.number,
-        textAlign: TextAlign.center,
-        maxLength: 1,
-        style: const TextStyle(
-          fontSize: 28,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF1E90FF),
+      child: GestureDetector(
+        onTap: () => _showNumberPickerBottomSheet(
+          context,
+          controller,
+          maxValue: maxValue,
         ),
-        decoration: const InputDecoration(
-          border: InputBorder.none,
-          counterText: '',
-          contentPadding: EdgeInsets.zero,
-          filled: false,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Center(
+            child: Text(
+              controller.text.isEmpty ? '0' : controller.text,
+              style: const TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1E90FF),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -802,62 +841,149 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
     );
   }
 
-  // Build single editable box for sessions
+  // Build single editable box for sessions with wheel picker
   Widget _buildSingleBox(TextEditingController controller) {
-    return Container(
-      width: 68,
-      height: 60,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF1E90FF), width: 2.5),
+    return GestureDetector(
+      onTap: () => _showNumberPickerBottomSheet(
+        context,
+        controller,
+        maxValue: 9,
       ),
-      child: Center(
-        child: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          textAlign: TextAlign.center,
-          maxLength: 1,
-          style: const TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1E90FF),
-          ),
-          decoration: const InputDecoration(
-            border: InputBorder.none,
-            counterText: '',
-            contentPadding: EdgeInsets.zero,
+      child: Container(
+        width: 68,
+        height: 60,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFF1E90FF), width: 2.5),
+        ),
+        child: Center(
+          child: Text(
+            controller.text.isEmpty ? '0' : controller.text,
+            style: const TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E90FF),
+            ),
           ),
         ),
       ),
     );
   }
 
-  // Build editable white box for minutes
+  // Build editable white box for minutes/seconds with wheel picker
   Widget _buildEditableBox(TextEditingController controller, int maxLength) {
-    return Container(
-      width: 78,
-      height: 52,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+    int maxValue = maxLength == 2 ? 59 : 9;
+    return GestureDetector(
+      onTap: () => _showNumberPickerBottomSheet(
+        context,
+        controller,
+        maxValue: maxValue,
       ),
-      child: Center(
-        child: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          textAlign: TextAlign.center,
-          maxLength: maxLength,
-          style: const TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1E90FF),
+      child: Container(
+        width: 78,
+        height: 52,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Text(
+            controller.text.isEmpty ? '00' : controller.text.padLeft(maxLength, '0'),
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E90FF),
+            ),
           ),
-          decoration: const InputDecoration(
-            border: InputBorder.none,
-            counterText: '',
-            contentPadding: EdgeInsets.zero,
-          ),
+        ),
+      ),
+    );
+  }
+
+  // Show number picker wheel in bottom sheet
+  void _showNumberPickerBottomSheet(BuildContext context, TextEditingController controller, {required int maxValue}) {
+    int currentValue = int.tryParse(controller.text) ?? 0;
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFFFFE082),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          border: Border(top: BorderSide(color: Colors.black, width: 2)),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Select Value',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1E40AF),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Wheel picker
+            SizedBox(
+              height: 150,
+              child: ListWheelScrollView(
+                itemExtent: 45,
+                onSelectedItemChanged: (index) {
+                  currentValue = index;
+                },
+                children: List.generate(
+                  maxValue + 1,
+                  (index) => GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        controller.text = index.toString();
+                      });
+                      Navigator.pop(ctx);
+                    },
+                    child: Center(
+                      child: Text(
+                        index.toString().padLeft(maxValue > 9 ? 2 : 1, '0'),
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E40AF),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Confirm button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    controller.text = currentValue.toString();
+                  });
+                  Navigator.pop(ctx);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E40AF),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const Text(
+                  'Done',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1100,14 +1226,14 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
         final double potLeft = 6 * scale;
         final double potBottom = 70 * scale;
 
-        // Per-level plant layout (align stem to pot center/top)
+        // Per-level plant layout (align stem to pot center/to  p)
         final _PlantLayout layout = _plantLayouts[_currentPlantState];
         final double plantHeight = layout.height * scale;
         final double plantWidth = layout.width * scale;
         final double plantLeft =
             layout.left * scale; // Use layout.left for per-level positioning
         final double plantBottom = layout.bottom * scale;
-        final double wateringBottom = 70 * scale;
+        final double wateringBottom = 90 * scale;
         final double wateringRight = -15 * scale; // Ελαφρώς πιο δεξιά
         final double settingsLeft = 10 * scale;
         final double settingsTop = 17 * scale;

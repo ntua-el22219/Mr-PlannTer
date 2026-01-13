@@ -62,14 +62,14 @@ class _MainPageScreenState extends State<MainPageScreen>
       ),
       TweenSequenceItem(
         tween: ConstantTween<double>(1.15),
-        weight: 40, // 40% του χρόνου για παραμονή
+        weight: 10, // 10% του χρόνου για παραμονή
       ),
       TweenSequenceItem(
         tween: Tween<double>(
           begin: 1.15,
           end: 1.0,
         ).chain(CurveTween(curve: Curves.easeInOut)),
-        weight: 30, // 30% του χρόνου για μικραίνω
+        weight: 60, // 60% του χρόνου για μικραίνω
       ),
     ]).animate(_wateringCanAnimationController);
 
@@ -82,13 +82,13 @@ class _MainPageScreenState extends State<MainPageScreen>
         ).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 30,
       ),
-      TweenSequenceItem(tween: ConstantTween<double>(0.8), weight: 40),
+      TweenSequenceItem(tween: ConstantTween<double>(0.8), weight: 10),
       TweenSequenceItem(
         tween: Tween<double>(
           begin: 0.8,
           end: 0.0,
         ).chain(CurveTween(curve: Curves.easeInOut)),
-        weight: 30,
+        weight: 60,
       ),
     ]).animate(_wateringCanAnimationController);
   }
@@ -145,7 +145,7 @@ class _MainPageScreenState extends State<MainPageScreen>
                 final double plantLeft = 6 * scale;
                 final double plantBottom = 192 * scale;
 
-                final double wateringBottom = 70 * scale;
+                final double wateringBottom = 90 * scale;
                 final double wateringRight =
                     -10 * scale; // Ελάχιστα πιο αριστερά
                 final double settingsLeft = 10 * scale;
