@@ -38,7 +38,6 @@ dependencies:
   table_calendar: ^3.0.9
   vibration: ^3.1.5       # For vibration (Haptics)
   audioplayers: ^6.0.0    # Για ήχους (Audio)
-  flutter_local_notifications: ^17.0.0  # For push notifications
   file_picker: ^8.0.0     # For file picking
   url_launcher: ^6.1.0    # For opening URLs
   http: ^1.1.0            # For HTTP requests
