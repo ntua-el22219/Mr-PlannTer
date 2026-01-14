@@ -2,12 +2,15 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:vibration/vibration.dart';
 import 'dart:async';
 import '../data/database_helper.dart'; // Για αποθήκευση στο τέλος
 import '../data/local_storage_service.dart';
 import '../data/flower_colors.dart';
 import '../services/audio_service.dart';
+import '../services/notification_service.dart';
 import '../widgets/cloudy_background.dart';
+import '../widgets/animated_settings_button.dart';
 import '../theme/text_styles.dart';
 
 import 'settings_screen.dart';
@@ -334,6 +337,25 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
           await _audioService.playEndOfSessions();
         }
 
+        // Vibration pattern for study completion
+        try {
+          // Strong vibration pattern: vibrate 500ms with pause and another pulse
+          await Vibration.vibrate(duration: 500);
+          await Future.delayed(const Duration(milliseconds: 200));
+          await Vibration.vibrate(duration: 300);
+        } catch (e) {
+          debugPrint('Vibration error: $e');
+        }
+
+        // Send notification for study completion
+        try {
+          debugPrint('Sending study completion notification...');
+          await NotificationService.sendStudyCompletedNotification();
+          debugPrint('Study completion notification sent successfully');
+        } catch (e) {
+          debugPrint('Notification error: $e');
+        }
+
         // Προσπάθεια αποθήκευσης στη βάση (με error handling)
         try {
           final db = DatabaseHelper();
@@ -415,6 +437,20 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
       // Play study time start sound for next session
       if (soundEffectsEnabled) {
         await _audioService.playStudyTimeStart();
+      }
+
+      // Vibration for break end
+      try {
+        await Vibration.vibrate(duration: 300);
+      } catch (e) {
+        debugPrint('Vibration error: $e');
+      }
+
+      // Send notification for break end
+      try {
+        await NotificationService.sendBreakEndedNotification();
+      } catch (e) {
+        debugPrint('Notification error: $e');
       }
 
       // Τέλος Διαλείμματος -> Πάμε στο επόμενο session διαβάσματος
@@ -1259,22 +1295,16 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
         return Stack(
           children: [
             // Settings Icon
-            Positioned(
+            AnimatedSettingsButton(
               left: settingsLeft,
               top: settingsTop,
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => SettingsScreen()),
-                  );
-                },
-                child: SizedBox(
-                  width: settingsSize,
-                  height: settingsSize,
-                  child: const Icon(Icons.settings, size: 40),
-                ),
-              ),
+              size: settingsSize,
+              onTap: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                );
+              },
             ),
 
             // Τίτλος & Χρονόμετρο

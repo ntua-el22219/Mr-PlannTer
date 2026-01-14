@@ -1,3 +1,4 @@
+import '../theme/importance_colors.dart';
 import 'package:flutter/material.dart';
 import '../data/task_model.dart';
 import '../screens/new_task_screen.dart';
@@ -325,7 +326,10 @@ class _MonthViewWidgetState extends State<MonthViewWidget> {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.85),
+                            color: getImportanceColor(
+                              type: task.type,
+                              importance: task.importance,
+                            ),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: task.type == 'deadline'

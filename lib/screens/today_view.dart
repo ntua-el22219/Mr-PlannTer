@@ -3,6 +3,7 @@ import 'dart:async';
 import '../data/task_model.dart';
 import '../data/database_helper.dart';
 import '../theme/text_styles.dart';
+import '../theme/importance_colors.dart';
 import './calendar_utils.dart';
 
 class TodayViewWidget extends StatefulWidget {
@@ -129,13 +130,11 @@ class _TodayViewWidgetState extends State<TodayViewWidget> {
   }
 
   Widget _buildTaskCard(Task task, BuildContext context) {
-    final isDeadline = task.type == 'deadline';
-    final defaultBackgroundColor = isDeadline
-        ? const Color(0xFFD4BBA8)
-        : const Color(0xFFC5D9F0);
-    final backgroundColor = task.colorValue != null
-        ? Color(task.colorValue!)
-        : defaultBackgroundColor;
+    // Use importance-based color
+    final backgroundColor = getImportanceColor(
+      type: task.type,
+      importance: task.importance,
+    );
 
     final timeParts = task.scheduledTime.split(':');
     final hour = int.parse(timeParts[0]);
@@ -195,8 +194,7 @@ class _TodayViewWidgetState extends State<TodayViewWidget> {
                       'Ends in 3 hours',
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.black.withOpacity(0.6),
+                    return Container(
                       ),
                     ),
                   ],
@@ -248,73 +246,7 @@ class _TodayViewWidgetState extends State<TodayViewWidget> {
     );
   }
 
-  void _showColorPickerDialog(Task task) {
-    final colors = [
-      const Color(0xFFC5D9F0),
-      const Color(0xFFD4BBA8),
-      const Color(0xFFFFD93D),
-      const Color(0xFF6BCB77),
-      const Color(0xFF4D96FF),
-      const Color(0xFFFF6B6B),
-      const Color(0xFFA78BFA),
-      const Color(0xFFFFA500),
-    ];
-
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return Container(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Choose Task Color',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 20),
-              GridView.count(
-                crossAxisCount: 4,
-                shrinkWrap: true,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                children: colors.map((color) {
-                  final isSelected = task.colorValue == color.value;
-                  return GestureDetector(
-                    onTap: () {
-                      Navigator.pop(context);
-                      _updateTaskColor(task, color);
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                        border: isSelected
-                            ? Border.all(color: Colors.black, width: 3)
-                            : Border.all(color: Colors.grey.shade400, width: 1),
-                      ),
-                      child: isSelected
-                          ? const Icon(
-                              Icons.check,
-                              color: Colors.black,
-                              size: 24,
-                            )
-                          : null,
-                    ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  // Color picker removed: color is now determined by importance.
 
   Future<void> _updateTaskColor(Task task, Color color) async {
     try {

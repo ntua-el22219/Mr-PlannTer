@@ -47,7 +47,7 @@ class LocalStorageService {
   }
 
   // Song Selection
-  String? getSelectedSong() => _prefs.getString('selectedSong') ?? 'No song';
+  String? getSelectedSong() => _prefs.getString('selectedSong') ?? 'Lo-fi Beats';
 
   Future<void> setSelectedSong(String song) async {
     await _prefs.setString('selectedSong', song);
@@ -60,8 +60,16 @@ class LocalStorageService {
     await _prefs.setString('importedSongPath', path);
   }
 
+  // Imported Song Name
+  String? getImportedSongName() => _prefs.getString('importedSongName');
+
+  Future<void> setImportedSongName(String name) async {
+    await _prefs.setString('importedSongName', name);
+  }
+
   Future<void> clearImportedSong() async {
     await _prefs.remove('importedSongPath');
+    await _prefs.remove('importedSongName');
     // Reset selected song to default if it was the imported song
     final selected = _prefs.getString('selectedSong');
     if (selected != null &&
