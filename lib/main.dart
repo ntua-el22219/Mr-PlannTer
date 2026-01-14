@@ -6,7 +6,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'data/local_storage_service.dart';
 import 'data/database_helper.dart';
-import 'data/notification_service.dart';
+// import 'data/notification_service.dart';
 import 'screens/main_wrapper_screen.dart';
 import 'services/sound_effect_service.dart';
 import 'services/audio_service.dart';
@@ -16,7 +16,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
 // 1. Αρχικοποίηση Ειδοποιήσεων
-  await NotificationService().init();
+  await NotificationService.initialize();
 
   // 2. Ρυθμίσεις Οθόνης
   // Enable full screen mode
