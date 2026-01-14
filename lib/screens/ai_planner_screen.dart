@@ -4,6 +4,7 @@ import '../data/task_model.dart';
 import '../data/gemini_service.dart';
 import '../data/recurrence_helper.dart';
 import '../widgets/cloudy_background.dart';
+import '../data/notification_service.dart'; 
 
 class AIPlannerScreen extends StatefulWidget {
   const AIPlannerScreen({super.key});
@@ -188,6 +189,19 @@ class _AIPlannerScreenState extends State<AIPlannerScreen> {
       task.scheduledTime = suggestion['time'];
 
       await DatabaseHelper().updateTask(task.toMap());
+
+      // Set up notifications for the scheduled task
+      if (mounted) {
+        // Εμφανίζουμε το Pop-up αμέσως μετά την αποδοχή
+        await showNotificationSetupDialog(
+          context,
+          task.id!, 
+          task.title,
+          task.scheduledDate,
+          task.scheduledTime,
+          task.type == 'deadline', // Έλεγχος αν είναι deadline
+        );
+      }
       
       // Remove this task from unplanned list without full reload
       setState(() {

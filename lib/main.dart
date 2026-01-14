@@ -6,6 +6,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'data/local_storage_service.dart';
 import 'data/database_helper.dart';
+import 'data/notification_service.dart';
 import 'screens/main_wrapper_screen.dart';
 import 'services/sound_effect_service.dart';
 import 'services/audio_service.dart';
@@ -14,11 +15,15 @@ import 'services/notification_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Enable full screen mode on Android
+// 1. Αρχικοποίηση Ειδοποιήσεων
+  await NotificationService().init();
+
+  // 2. Ρυθμίσεις Οθόνης
+  // Enable full screen mode
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   
   // Lock to portrait orientation
-  SystemChrome.setPreferredOrientations([
+  await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
