@@ -6,10 +6,14 @@ import 'package:sqflite/sqflite.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'data/local_storage_service.dart';
 import 'data/database_helper.dart';
+import 'data/notification_service.dart';
 import 'screens/main_wrapper_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize the notification service
+  await NotificationService().init();
 
   // Load environment variables
   try {

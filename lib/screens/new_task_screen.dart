@@ -5,6 +5,7 @@ import '../data/task_model.dart';
 import '../data/recurrence_helper.dart';
 import '../widgets/cloudy_background.dart';
 import '../widgets/recurrence_picker_dialog.dart';
+import '../data/notification_service.dart';
 
 class NewTaskScreen extends StatefulWidget {
   final String initialType; // 'task' or 'deadline'
@@ -164,7 +165,7 @@ class _NewTaskScreenState extends State<NewTaskScreen> {
         // For tasks, only if planning is expanded
         final isPlanned = _type == 'deadline' || _isPlanningExpanded;
 
-        // ⚠️ CRITICAL VALIDATION: Prevent incomplete planned tasks
+        // CRITICAL VALIDATION: Prevent incomplete planned tasks
         if (isPlanned) {
           // Deadline: MUST have date and time
           if (_type == 'deadline') {
@@ -222,7 +223,7 @@ class _NewTaskScreenState extends State<NewTaskScreen> {
             ? "${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}"
             : ''; // Empty for unplanned
 
-        // ⚠️ CONSISTENCY CHECK: Ensure both or neither are set
+        // CONSISTENCY CHECK: Ensure both or neither are set
         if ((scheduledDate.isEmpty && scheduledTime.isNotEmpty) ||
             (scheduledDate.isNotEmpty && scheduledTime.isEmpty)) {
           debugPrint('ERROR: Inconsistent date/time state!');
@@ -257,17 +258,30 @@ class _NewTaskScreenState extends State<NewTaskScreen> {
           'scheduled_time': scheduledTime,
           'recurrence_rule': _recurrenceRule,
         };
+ 
+        int taskId; // 1. Δημιουργούμε μεταβλητή για να κρατήσουμε το ID
 
         // Προσπάθεια αποθήκευσης
         if (widget.existingTask != null) {
           // Update existing task
-          if (widget.existingTask!.id != null) {
-            taskData['id'] = widget.existingTask!.id!;
-          }
+          taskId = widget.existingTask!.id!; 
+          taskData['id'] = taskId;
           await DatabaseHelper().updateTask(taskData);
         } else {
-          // Insert new task
-          await DatabaseHelper().insertTask(taskData);
+          taskId = await DatabaseHelper().insertTask(taskData);
+        }
+
+        // 2. Ελέγχουμε αν πρέπει να βγάλουμε το Pop-up Ειδοποιήσεων
+        // (Μόνο αν έχει οριστεί ημερομηνία και ώρα)
+        if (scheduledDate.isNotEmpty && scheduledTime.isNotEmpty && mounted) {
+           await showNotificationSetupDialog(
+             context,
+             taskId, // Περνάμε το σωστό ID
+             _titleController.text.trim(),
+             scheduledDate,
+             scheduledTime,
+             _type == 'deadline',
+           );
         }
 
         // Αν όλα πήγαν καλά, κλείσε το παράθυρο
@@ -320,7 +334,7 @@ class _NewTaskScreenState extends State<NewTaskScreen> {
                   children: [
                     Center(
                       child: Text(
-                        'Confirm Task',
+                        _type == 'deadline' ? 'Confirm Deadline' : 'Confirm Task',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,

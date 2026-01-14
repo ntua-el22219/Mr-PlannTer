@@ -52,6 +52,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   google_fonts: ^6.1.0
   google_generative_ai: ^0.4.6
+  flutter_local_notifications: ^18.0.1
+  timezone: ^0.10.0
+  flutter_timezone: ^3.0.1
 
 dev_dependencies:
   flutter_test:
