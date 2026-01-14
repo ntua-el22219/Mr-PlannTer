@@ -13,11 +13,14 @@ class RecurrencePickerDialog extends StatefulWidget {
 
 class _RecurrencePickerDialogState extends State<RecurrencePickerDialog> {
   late String _frequency;
+  String _customBaseFrequency = 'DAILY';
   late int _interval;
   late List<String> _selectedDays;
   late String _endType;
   late String _endDate;
   late String _endCount;
+
+  late TextEditingController _intervalController;
 
   final List<String> _frequencyOptions = [
     'NONE',
@@ -26,6 +29,7 @@ class _RecurrencePickerDialogState extends State<RecurrencePickerDialog> {
     'BIWEEKLY',
     'MONTHLY',
     'YEARLY',
+    'CUSTOM',
   ];
 
   final Map<String, String> _frequencyLabels = {
@@ -35,6 +39,7 @@ class _RecurrencePickerDialogState extends State<RecurrencePickerDialog> {
     'BIWEEKLY': 'Every 2 weeks',
     'MONTHLY': 'Monthly',
     'YEARLY': 'Yearly',
+    'CUSTOM': 'Custom',
   };
 
   final List<String> _weekDays = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
@@ -58,6 +63,22 @@ class _RecurrencePickerDialogState extends State<RecurrencePickerDialog> {
     _endType = parsed['endType'];
     _endDate = parsed['endDate'];
     _endCount = parsed['endCount'];
+    _intervalController = TextEditingController(text: _interval.toString());
+
+    // If editing a custom rule, try to infer the base frequency
+    if (_frequency == 'CUSTOM') {
+      // Try to get the real freq from the RRULE string
+      final freq = parsed['customBaseFrequency'] ?? 'DAILY';
+      _customBaseFrequency = freq;
+    } else if (_frequency == 'DAILY' || _frequency == 'WEEKLY' || _frequency == 'MONTHLY' || _frequency == 'YEARLY') {
+      _customBaseFrequency = _frequency;
+    }
+  }
+
+  @override
+  void dispose() {
+    _intervalController.dispose();
+    super.dispose();
   }
 
   Future<void> _pickEndDate() async {
@@ -141,33 +162,32 @@ class _RecurrencePickerDialogState extends State<RecurrencePickerDialog> {
                 ),
                 const SizedBox(height: 16),
 
-                // Interval for custom repeat
-                if (_frequency != 'NONE' && _frequency != 'BIWEEKLY')
+                // Interval for custom repeat only
+                if (_frequency == 'CUSTOM')
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Interval',
+                        'Repeat every',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.blue.shade900,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       Row(
                         children: [
-                          Expanded(
+                          SizedBox(
+                            width: 60,
                             child: Container(
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.black),
+                                border: Border.all(color: Colors.black26),
                               ),
                               child: TextField(
                                 keyboardType: TextInputType.number,
-                                controller: TextEditingController(
-                                  text: _interval.toString(),
-                                ),
+                                controller: _intervalController,
                                 onChanged: (value) {
                                   setState(() {
                                     _interval = int.tryParse(value) ?? 1;
@@ -177,13 +197,36 @@ class _RecurrencePickerDialogState extends State<RecurrencePickerDialog> {
                                   border: InputBorder.none,
                                   contentPadding: EdgeInsets.all(10),
                                 ),
+                                textAlign: TextAlign.center,
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _getIntervalLabel(),
-                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.black26),
+                              ),
+                              child: DropdownButton<String>(
+                                value: _customBaseFrequency,
+                                isExpanded: true,
+                                underline: const SizedBox(),
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                items: ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'].map((freq) {
+                                  return DropdownMenuItem(
+                                    value: freq,
+                                    child: Text(_frequencyLabels[freq] ?? freq),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    if (value != null) _customBaseFrequency = value;
+                                  });
+                                },
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -192,7 +235,7 @@ class _RecurrencePickerDialogState extends State<RecurrencePickerDialog> {
                   ),
 
                 // Days of week for weekly
-                if (_frequency == 'WEEKLY' || _frequency == 'BIWEEKLY')
+                if (_frequency == 'WEEKLY' || _frequency == 'BIWEEKLY' || (_frequency == 'CUSTOM'))
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -367,8 +410,9 @@ class _RecurrencePickerDialogState extends State<RecurrencePickerDialog> {
                           return;
                         }
 
+                        // If custom, use the selected base frequency for RRULE
                         final rule = RecurrenceHelper.buildRule(
-                          frequency: _frequency,
+                          frequency: _frequency == 'CUSTOM' ? _customBaseFrequency : _frequency,
                           interval: _interval,
                           byDay: _selectedDays,
                           endType: _endType,

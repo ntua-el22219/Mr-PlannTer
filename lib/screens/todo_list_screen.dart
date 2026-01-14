@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../data/database_helper.dart';
 import '../data/task_model.dart';
 import '../widgets/cloudy_background.dart';
+import '../widgets/animated_settings_button.dart';
 import 'settings_screen.dart';
 import 'new_task_screen.dart';
 import 'ai_planner_screen.dart';
@@ -157,31 +158,22 @@ class _TodoListScreenState extends State<TodoListScreen> {
 
     return Scaffold(
       body: CloudyBackground(
-        child: SafeArea(
-          child: Stack(
-            children: [
-              // Settings Icon
-              Positioned(
-                top: 10,
-                left: 10,
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.settings,
-                    size: 35,
-                    color: Colors.black,
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (c) => const SettingsScreen()),
-                    );
-                  },
-                ),
-              ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final double scale = (constraints.maxHeight / 917.0).clamp(0.7, 1.4);
+            final double settingsLeft = 10 * scale;
+            final double settingsTop = 17 * scale;
+            final double settingsSize = 72 * scale;
+
+            return Stack(
+              children: [
+                SafeArea(
+                  child: Stack(
+                    children: [
 
               // Κεντρικό Κίτρινο Πλαίσιο
               Positioned(
-                top: 60,
+                top: 120,
                 bottom: 80,
                 left: 20,
                 right: 20,
@@ -191,91 +183,109 @@ class _TodoListScreenState extends State<TodoListScreen> {
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: Colors.black, width: 2),
                   ),
-                  child: Column(
-                    children: [
-                      // Tabs (Tasks / Deadlines)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 15,
-                          horizontal: 20,
-                        ),
-                        child: Row(
-                          children: [
-                            _buildTabButton(
-                              'Tasks',
-                              !_showDeadlines,
-                              () => setState(() => _showDeadlines = false),
-                            ),
-                            const SizedBox(width: 20),
-                            _buildTabButton(
-                              'Deadlines',
-                              _showDeadlines,
-                              () => setState(() => _showDeadlines = true),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      Container(
-                        height: 2,
-                        color: Colors.black12,
-                        margin: const EdgeInsets.symmetric(horizontal: 10),
-                      ),
-
-                      // Λίστα με Tasks/Deadlines
-                      Expanded(
-                        child: _isLoading
-                            ? const Center(child: CircularProgressIndicator())
-                            : currentList.isEmpty
-                            ? Center(
-                                child: Text(
-                                  "No ${_showDeadlines ? 'deadlines' : 'tasks'} yet!",
-                                  style: const TextStyle(color: Colors.black54),
-                                ),
-                              )
-                            : ListView.builder(
-                                padding: const EdgeInsets.all(10),
-                                itemCount: currentList.length,
-                                itemBuilder: (context, index) {
-                                  return _buildTaskItem(currentList[index]);
-                                },
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onHorizontalDragEnd: (details) {
+                      final velocity = details.primaryVelocity ?? 0;
+                      if (velocity.abs() > 100) {
+                        if (velocity < 0 && _showDeadlines) {
+                          // Swiped left, but already on Deadlines, so do nothing
+                        } else if (velocity < 0 && !_showDeadlines) {
+                          // Swiped left - go to Deadlines
+                          setState(() => _showDeadlines = true);
+                        } else if (velocity > 0 && _showDeadlines) {
+                          // Swiped right - go to Tasks
+                          setState(() => _showDeadlines = false);
+                        }
+                      }
+                    },
+                    child: Column(
+                      children: [
+                        // Tabs (Tasks / Deadlines)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 15,
+                            horizontal: 20,
+                          ),
+                          child: Row(
+                            children: [
+                              _buildTabButton(
+                                'Tasks',
+                                !_showDeadlines,
+                                () => setState(() => _showDeadlines = false),
                               ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+                              const SizedBox(width: 20),
+                              _buildTabButton(
+                                'Deadlines',
+                                _showDeadlines,
+                                () => setState(() => _showDeadlines = true),
+                              ),
+                            ],
+                          ),
+                        ),
 
-              // AI Planner Button
-              Positioned(
-                bottom: 90,
-                left: 30,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      side: const BorderSide(color: Colors.black, width: 1.5),
+                        Container(
+                          height: 2,
+                          color: Colors.black12,
+                          margin: const EdgeInsets.symmetric(horizontal: 10),
+                        ),
+
+                        // Λίστα με Tasks/Deadlines
+                        Expanded(
+                          child: _isLoading
+                              ? const Center(child: CircularProgressIndicator())
+                              : currentList.isEmpty
+                              ? Center(
+                                  child: Text(
+                                    "No ${_showDeadlines ? 'deadlines' : 'tasks'} yet!",
+                                    style: const TextStyle(color: Colors.black54),
+                                  ),
+                                )
+                              : ListView.builder(
+                                  padding: const EdgeInsets.all(10),
+                                  itemCount: currentList.length,
+                                  itemBuilder: (context, index) {
+                                    return _buildTaskItem(currentList[index]);
+                                  },
+                                ),
+                        ),
+                      ],
                     ),
                   ),
-                  onPressed: () async {
-                    // Ανοίγουμε την οθόνη του AI και περιμένουμε να γυρίσει
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (c) => const AIPlannerScreen(),
-                      ),
-                    );
-
-                    // Αν επιστρέψει true (σημαίνει ότι προστέθηκαν tasks), κάνουμε refresh τη λίστα
-                    if (result == true) {
-                      _refreshTaskList();
-                    }
-                  },
-                  child: const Text("AI Planner"),
                 ),
               ),
+
+              // AI Planner Button (only show for Tasks, not Deadlines)
+              if (!_showDeadlines)
+                Positioned(
+                  bottom: 90,
+                  left: 30,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: const BorderSide(color: Colors.black, width: 1.5),
+                      ),
+                    ),
+                    onPressed: () async {
+                      // Ανοίγουμε την οθόνη του AI και περιμένουμε να γυρίσει
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (c) => const AIPlannerScreen(),
+                        ),
+                      );
+
+                      // Αν επιστρέψει true (σημαίνει ότι προστέθηκαν tasks), κάνουμε refresh τη λίστα
+                      if (result == true) {
+                        _refreshTaskList();
+                      }
+                    },
+                    child: const Text("AI Planner"),
+                  ),
+                ),
 
               // Κουμπί Προσθήκης (+)
               Positioned(
@@ -295,8 +305,26 @@ class _TodoListScreenState extends State<TodoListScreen> {
                   ),
                 ),
               ),
-            ],
-          ),
+                    ],
+                  ),
+                ),
+                // Settings Icon (same as main page)
+                AnimatedSettingsButton(
+                  top: settingsTop,
+                  left: settingsLeft,
+                  size: settingsSize,
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (c) => const SettingsScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

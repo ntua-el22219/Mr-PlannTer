@@ -4,8 +4,12 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'settings_screen.dart';
 import 'plants_album_screen.dart';
 import 'timer_wrapper_screen.dart';
+import '../data/local_storage_service.dart';
+import '../data/flower_colors.dart';
 import '../widgets/cloudy_background.dart';
 import '../widgets/mr_watering_can.dart';
+import '../widgets/animated_settings_button.dart';
+import '../services/sound_effect_service.dart';
 
 class MainPageScreen extends StatefulWidget {
   const MainPageScreen({super.key});
@@ -21,12 +25,25 @@ class _MainPageScreenState extends State<MainPageScreen>
   late AnimationController _wateringCanAnimationController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _glowAnimation;
+  late AnimationController _albumTapController;
+  late Animation<double> _albumScaleAnimation;
+  late AnimationController _wateringCanTapController;
+  late Animation<double> _wateringCanTapScaleAnimation;
+
+  final LocalStorageService _storageService = LocalStorageService();
 
   // PATHS ASSETS
-  final String _plantImagePath = 'assets/images/plant_level6.svg';
   final String _albumImagePath = 'assets/images/plants_calendar_album.svg';
   final String _potImagePath = 'assets/images/pot_normal.svg';
   final String _grassImagePath = 'assets/images/grass.svg';
+
+  // Get the plant image path based on selected flower color
+  String get _plantImagePath {
+    final selectedColorKey = _storageService.selectedFlowerColor;
+    final flowerColor = FlowerColors.getByKey(selectedColorKey);
+    // Always show level 6 on main page
+    return flowerColor.level6ImagePath;
+  }
 
   @override
   void initState() {
@@ -62,14 +79,14 @@ class _MainPageScreenState extends State<MainPageScreen>
       ),
       TweenSequenceItem(
         tween: ConstantTween<double>(1.15),
-        weight: 40, // 40% του χρόνου για παραμονή
+        weight: 10, // 10% του χρόνου για παραμονή
       ),
       TweenSequenceItem(
         tween: Tween<double>(
           begin: 1.15,
           end: 1.0,
         ).chain(CurveTween(curve: Curves.easeInOut)),
-        weight: 30, // 30% του χρόνου για μικραίνω
+        weight: 60, // 60% του χρόνου για μικραίνω
       ),
     ]).animate(_wateringCanAnimationController);
 
@@ -82,30 +99,56 @@ class _MainPageScreenState extends State<MainPageScreen>
         ).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 30,
       ),
-      TweenSequenceItem(tween: ConstantTween<double>(0.8), weight: 40),
+      TweenSequenceItem(tween: ConstantTween<double>(0.8), weight: 10),
       TweenSequenceItem(
         tween: Tween<double>(
           begin: 0.8,
           end: 0.0,
         ).chain(CurveTween(curve: Curves.easeInOut)),
-        weight: 30,
+        weight: 60,
       ),
     ]).animate(_wateringCanAnimationController);
+
+    // Album tap animation - enlarge on tap
+    _albumTapController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+
+    _albumScaleAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _albumTapController, curve: Curves.easeInOut),
+    );
+
+    // Waterpot tap animation - enlarge on tap
+    _wateringCanTapController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+
+    _wateringCanTapScaleAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _wateringCanTapController, curve: Curves.easeInOut),
+    );
   }
 
   @override
   void dispose() {
     _cloudController.dispose();
     _wateringCanAnimationController.dispose();
+    _albumTapController.dispose();
+    _wateringCanTapController.dispose();
     super.dispose();
   }
 
   void _onWateringCanTapped(BuildContext context) {
     // Το πάτημα στο ποτιστήρι ανοίγει το Timer Setup
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (c) => const TimerWrapperScreen()),
-    );
+    SoundEffectService.playWaterSound();
+    _wateringCanTapController.forward().then((_) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (c) => const TimerWrapperScreen()),
+      );
+      _wateringCanTapController.reset();
+    });
   }
 
   @override
@@ -115,6 +158,8 @@ class _MainPageScreenState extends State<MainPageScreen>
       animation: Listenable.merge([
         _cloudAnimation,
         _wateringCanAnimationController,
+        _albumScaleAnimation,
+        _wateringCanTapScaleAnimation,
       ]),
       builder: (context, child) {
         return Scaffold(
@@ -145,7 +190,7 @@ class _MainPageScreenState extends State<MainPageScreen>
                 final double plantLeft = 6 * scale;
                 final double plantBottom = 192 * scale;
 
-                final double wateringBottom = 70 * scale;
+                final double wateringBottom = 90 * scale;
                 final double wateringRight =
                     -10 * scale; // Ελάχιστα πιο αριστερά
                 final double settingsLeft = 10 * scale;
@@ -158,47 +203,48 @@ class _MainPageScreenState extends State<MainPageScreen>
                 return Stack(
                   children: [
                     // Settings Icon (Figma: left: 10px, top: 17px, size: 72px)
-                    Positioned(
+                    AnimatedSettingsButton(
                       top: settingsTop,
                       left: settingsLeft,
-                      child: IconButton(
-                        icon: Icon(
-                          Icons.settings,
-                          size: 72 * scale,
-                          color: Colors.black,
-                        ),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (c) => const SettingsScreen(),
-                            ),
-                          );
-                        },
-                      ),
+                      size: 72 * scale,
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (c) => const SettingsScreen(),
+                          ),
+                        );
+                      },
                     ),
 
                     // Album Icon (αγκιστρωμένο στη δεξιά πλευρά: right: 24.5px, top: 23px)
                     Positioned(
                       top: albumTop,
                       right: albumRight,
-                      child: GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (c) => const PlantsAlbumScreen(),
+                      child: Transform.scale(
+                        scale: _albumScaleAnimation.value,
+                        child: GestureDetector(
+                          onTap: () {
+                            SoundEffectService.playPopSound();
+                            _albumTapController.forward().then((_) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (c) => const PlantsAlbumScreen(),
+                                ),
+                              );
+                              _albumTapController.reset();
+                            });
+                          },
+                          child: SvgPicture.asset(
+                            _albumImagePath,
+                            height: 97.5 * scale,
+                            width: 121.5 * scale,
+                            errorBuilder: (c, e, s) => const Icon(
+                              Icons.book,
+                              size: 40,
+                              color: Colors.brown,
                             ),
-                          );
-                        },
-                        child: SvgPicture.asset(
-                          _albumImagePath,
-                          height: 97.5 * scale,
-                          width: 121.5 * scale,
-                          errorBuilder: (c, e, s) => const Icon(
-                            Icons.book,
-                            size: 40,
-                            color: Colors.brown,
                           ),
                         ),
                       ),
@@ -243,7 +289,7 @@ class _MainPageScreenState extends State<MainPageScreen>
                       right: wateringRight,
                       bottom: wateringBottom,
                       child: Transform.scale(
-                        scale: _scaleAnimation.value,
+                        scale: _scaleAnimation.value * _wateringCanTapScaleAnimation.value,
                         alignment: Alignment
                             .centerRight, // Μεγαλώνει από τη δεξιά πλευρά
                         child: Container(

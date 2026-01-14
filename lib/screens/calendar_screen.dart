@@ -1,9 +1,12 @@
+import '../theme/importance_colors.dart';
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../theme/text_styles.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'settings_screen.dart';
 import 'new_task_screen.dart';
 import '../widgets/cloudy_background.dart';
+import '../widgets/animated_settings_button.dart';
 import '../data/database_helper.dart';
 import '../data/task_model.dart';
 import '../data/recurrence_helper.dart';
@@ -25,6 +28,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
   CalendarView _currentView = CalendarView.today;
   late DateTime _visibleMonth;
   late DateTime _minMonth;
+  Timer? _timeUpdateTimer;
+  String _currentTime = '';
 
   List<Task> _allTasks = [];
   bool _isLoading = true;
@@ -36,7 +41,27 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final now = DateTime.now();
     _visibleMonth = DateTime(now.year, now.month, 1);
     _minMonth = _visibleMonth;
+    _currentTime = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     _loadTasks();
+    
+    // Update time display every second
+    _timeUpdateTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        final now = DateTime.now();
+        final newTime = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+        if (_currentTime != newTime) {
+          setState(() {
+            _currentTime = newTime;
+          });
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timeUpdateTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadTasks() async {
@@ -79,25 +104,80 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: CloudyAnimatedBackground(
-        child: Column(
-          children: [
-            // Fixed header section (doesn't scroll)
-            // Settings icon at top
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+    return WillPopScope(
+      onWillPop: () async {
+        // Handle back navigation
+        return true;
+      },
+      child: Scaffold(
+        body: CloudyAnimatedBackground(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final double scale = (constraints.maxHeight / 917.0).clamp(0.7, 1.4);
+              final double settingsLeft = 10 * scale;
+              final double settingsTop = 17 * scale;
+              final double settingsSize = 72 * scale;
+
+              return Stack(
                 children: [
-                  IconButton(
-                    icon: const Icon(
-                      Icons.settings,
-                      size: 28,
-                      color: Colors.black54,
-                    ),
-                    onPressed: () {
-                      Navigator.push(
+                  Column(
+                    children: [
+                      SizedBox(height: 85 * scale), // Space for settings icon
+                      // Date/time header (hidden on Month view per design)
+                      if (_currentView != CalendarView.month &&
+                          _currentView != CalendarView.calendar)
+                        _buildHeader(context),
+
+                      // View switcher buttons (always visible) - allows screen navigation
+                      _buildViewSwitcher(),
+
+                      // Scrollable content area with view switching gestures
+                      Expanded(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onHorizontalDragEnd: (details) {
+                            final velocity = details.primaryVelocity ?? 0;
+                            if (velocity.abs() > 100) {
+                              final currentIndex = CalendarView.values.indexOf(_currentView);
+                              
+                              if (velocity < 0) {
+                                // Swiped left - move to next view
+                                if (currentIndex < CalendarView.values.length - 1) {
+                                  setState(() => _currentView = CalendarView.values[currentIndex + 1]);
+                                }
+                              } else {
+                                // Swiped right - move to previous view
+                                if (currentIndex > 0) {
+                                  setState(() => _currentView = CalendarView.values[currentIndex - 1]);
+                                }
+                              }
+                            }
+                          },
+                          child: _currentView == CalendarView.month
+                              ? Column(
+                                  children: [
+                                    _buildMonthNavigationBar(),
+                                    Expanded(
+                                      child: SingleChildScrollView(
+                                        child: Column(
+                                          children: [_buildCurrentViewContent()],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : SingleChildScrollView(child: _buildCurrentViewContent()),
+                        ),
+                      ),
+                    ],
+                  ),
+                  // Settings Icon (same as main page)
+                  AnimatedSettingsButton(
+                    top: settingsTop,
+                    left: settingsLeft,
+                    size: settingsSize,
+                    onTap: () async {
+                      await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (c) => const SettingsScreen(),
@@ -106,33 +186,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     },
                   ),
                 ],
-              ),
-            ),
-
-            // Date/time header (hidden on Month view per design)
-            if (_currentView != CalendarView.month) _buildHeader(context),
-
-            // View switcher buttons (always visible)
-            _buildViewSwitcher(),
-
-            // Scrollable content area
-            Expanded(
-              child: _currentView == CalendarView.month
-                  ? Column(
-                      children: [
-                        _buildMonthNavigationBar(),
-                        Expanded(
-                          child: SingleChildScrollView(
-                            child: Column(
-                              children: [_buildCurrentViewContent()],
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : SingleChildScrollView(child: _buildCurrentViewContent()),
-            ),
-          ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -168,7 +224,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final dayName = _getDayName(now.weekday);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 50, 16, 20),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -215,85 +271,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ),
               ),
 
-              // Right: Time zones (hidden on Month view per design)
+              // Right: Current time
               if (_currentView != CalendarView.month)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    // Athens time
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.blue.shade200,
-                          width: 1,
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            _getCurrentTime('Athens'),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF1E40AF),
-                            ),
-                          ),
-                          Text(
-                            'Athens',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.blue.shade700,
-                            ),
-                          ),
-                        ],
-                      ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFCD34D),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    _currentTime,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1E40AF),
                     ),
-                    const SizedBox(height: 12),
-                    // Buenos Aires time
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.grey.shade300,
-                          width: 1,
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            _getCurrentTime('BuenosAires'),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black54,
-                            ),
-                          ),
-                          Text(
-                            'Buenos Aires',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey.shade700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
             ],
           ),
@@ -512,15 +508,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildTaskCard(Task task) {
-    final isDeadline = task.type == 'deadline';
-
-    // Use custom color if set, otherwise default colors
-    final defaultBackgroundColor = isDeadline
-        ? const Color(0xFFD4BBA8)
-        : const Color(0xFFC5D9F0);
-    final backgroundColor = task.colorValue != null
-        ? Color(task.colorValue!)
-        : defaultBackgroundColor;
+    // Use importance-based color
+    final backgroundColor = getImportanceColor(
+      type: task.type,
+      importance: task.importance,
+    );
 
     // Parse time
     final timeParts = task.scheduledTime.split(':');
@@ -569,7 +561,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             const SizedBox(height: 12),
 
             // Time info
-            if (isDeadline)
+            if (task.type == 'deadline')
               Align(
                 alignment: Alignment.centerRight,
                 child: Column(
@@ -1101,8 +1093,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Expanded(
             flex: 2,
             child: Wrap(
-              spacing: 12,
-              runSpacing: 12,
+              spacing: 10,
+              runSpacing: 10,
               children: timeSlots.map((slot) {
                 final slotTasks = tasks.where((t) {
                   final parsed = _parseTimeOfDay(t.scheduledTime);
@@ -1111,8 +1103,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       parsed.minute == slot.minute;
                 }).toList();
 
+                final hasTasksAtSlot = slotTasks.isNotEmpty;
+
                 return Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
                       _formatTimeOfDay(slot),
@@ -1123,53 +1118,77 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    GestureDetector(
-                      onTap: () => _showAddOptionsForSlot(date, slot),
-                      child: Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: backgroundColor.withOpacity(0.5),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.black.withOpacity(0.3),
-                            width: 1.5,
+                    // Show + button only if no tasks at this slot
+                    if (!hasTasksAtSlot)
+                      GestureDetector(
+                        onTap: () => _showAddOptionsForSlot(date, slot),
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.8),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.black.withOpacity(0.25),
+                              width: 2,
+                            ),
                           ),
-                        ),
-                        child: const Icon(
-                          Icons.add,
-                          size: 18,
-                          color: Colors.black,
+                          child: const Icon(
+                            Icons.add,
+                            size: 20,
+                            color: Colors.black54,
+                          ),
                         ),
                       ),
-                    ),
-                    if (slotTasks.isNotEmpty) ...[
-                      const SizedBox(height: 6),
+                    // Show tasks as rounded rectangles with full text
+                    if (hasTasksAtSlot) ...[
                       ...slotTasks.map((task) {
-                        return Container(
-                          margin: const EdgeInsets.only(top: 4),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.85),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
+                        return GestureDetector(
+                          onTap: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (c) => NewTaskScreen(
+                                  initialType: task.type,
+                                  existingTask: task,
+                                ),
+                              ),
+                            );
+                            if (result == true) _loadTasks();
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.only(top: 4),
+                            padding: const EdgeInsets.all(8),
+                            constraints: const BoxConstraints(
+                              minWidth: 70,
+                              maxWidth: 110,
+                            ),
+                            decoration: BoxDecoration(
                               color: task.type == 'deadline'
-                                  ? Colors.red
-                                  : Colors.blue,
-                              width: 1.5,
+                                  ? const Color(0xFFFFE5E5)
+                                  : const Color(0xFFE5F2FF),
+                              borderRadius: BorderRadius.circular(15),
+                              border: Border.all(
+                                color: task.type == 'deadline'
+                                    ? const Color(0xFFFF4444)
+                                    : const Color(0xFF4488FF),
+                                width: 2,
+                              ),
                             ),
-                          ),
-                          child: Text(
-                            task.title,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
+                            child: Text(
+                              task.title,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: task.type == 'deadline'
+                                    ? const Color(0xFFCC0000)
+                                    : const Color(0xFF0055CC),
+                                height: 1.2,
+                              ),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
                             ),
-                            overflow: TextOverflow.ellipsis,
                           ),
                         );
                       }),
@@ -1367,41 +1386,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
         // Selected day tasks
         if (_selectedDay != null) ...[
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              children: [
-                Text(
-                  '${_getDayName(_selectedDay!.weekday)}, ${_selectedDay!.day} ${_getMonthName(_selectedDay!.month)}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1E40AF),
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E40AF),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${selectedDayTasks.length} ${selectedDayTasks.length == 1 ? 'item' : 'items'}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
           if (selectedDayTasks.isEmpty)
             Padding(
               padding: const EdgeInsets.all(32.0),
@@ -1432,11 +1416,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildCalendarTaskCard(Task task) {
-    final color = task.colorValue != null
-        ? Color(task.colorValue!)
-        : (task.type == 'deadline'
-              ? const Color(0xFFD4BBA8)
-              : const Color(0xFFC5D9F0));
+    final color = getImportanceColor(
+      type: task.type,
+      importance: task.importance,
+    );
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -1498,7 +1481,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   color: Colors.black,
                 ),
               ),
-              if (task.duration > 0) ...[
+              if (task.type != 'deadline' && task.duration > 0) ...[
                 const SizedBox(height: 4),
                 Container(
                   padding: const EdgeInsets.symmetric(

@@ -252,7 +252,7 @@ class _NewTaskScreenState extends State<NewTaskScreen> {
           'type': _type,
           'is_completed': widget.existingTask?.isCompleted == true ? 1 : 0,
           'frequency': _type == 'task' ? _freqController.text.trim() : '',
-          'duration': duration,
+          'duration': _type == 'deadline' ? 0 : duration,
           'importance': _importance,
           'scheduled_date': scheduledDate,
           'scheduled_time': scheduledTime,
@@ -472,31 +472,6 @@ class _NewTaskScreenState extends State<NewTaskScreen> {
         child: SafeArea(
           child: Stack(
             children: [
-              // Close Button (X)
-              Positioned(
-                top: 20,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(width: 2.5),
-                        color: Colors.white.withOpacity(0.8),
-                      ),
-                      child: const Icon(
-                        Icons.close,
-                        size: 30,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
               // Main Yellow Container - Centered vertically
               Center(
                 child: Padding(
@@ -514,6 +489,7 @@ class _NewTaskScreenState extends State<NewTaskScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            const SizedBox(height: 10),
                             Center(
                               child: Text(
                                 title,
@@ -826,6 +802,31 @@ class _NewTaskScreenState extends State<NewTaskScreen> {
                           size: 40,
                           color: Colors.black,
                         ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Close Button (X) - Positioned last so it's on top
+              Positioned(
+                top: 20,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(width: 2.5),
+                        color: Colors.white.withOpacity(0.9),
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        size: 30,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),

@@ -17,6 +17,32 @@ class AudioService {
   AudioService._internal() {
     _audioPlayer = AudioPlayer();
     _soundEffectPlayer = AudioPlayer();
+    
+    // Configure audio context for Android to allow simultaneous playback
+    _audioPlayer.setAudioContext(
+      AudioContext(
+        android: AudioContextAndroid(
+          isSpeakerphoneOn: false,
+          stayAwake: false,
+          contentType: AndroidContentType.music,
+          usageType: AndroidUsageType.media,
+          audioFocus: AndroidAudioFocus.gain,
+        ),
+      ),
+    );
+    
+    _soundEffectPlayer.setAudioContext(
+      AudioContext(
+        android: AudioContextAndroid(
+          isSpeakerphoneOn: false,
+          stayAwake: false,
+          contentType: AndroidContentType.sonification,
+          usageType: AndroidUsageType.notificationEvent,
+          audioFocus: AndroidAudioFocus.gainTransientMayDuck,
+        ),
+      ),
+    );
+    
     // Set up listener to replay when song completes
     _audioPlayer.onPlayerComplete.listen((_) {
       if (_currentSongPath != null &&
@@ -118,6 +144,24 @@ class AudioService {
     _volumeFadeTimer?.cancel();
 
     try {
+      // Check if music player is still playing, if not, restart it
+      if (_audioPlayer.state == PlayerState.stopped &&
+          _currentSongPath != null &&
+          _currentSongPath!.isNotEmpty &&
+          _currentSong != null &&
+          _currentSong != 'No song') {
+        // Restart the music from where it left off
+        if (_currentSongPath!.contains('.mp3') ||
+            _currentSongPath!.contains('.m4a') ||
+            _currentSongPath!.contains('.wav')) {
+          await _audioPlayer.play(DeviceFileSource(_currentSongPath!),
+              volume: 0.0);
+        } else {
+          await _audioPlayer.play(AssetSource(_currentSongPath!), volume: 0.0);
+          await _audioPlayer.setReleaseMode(ReleaseMode.loop);
+        }
+      }
+
       double currentVolume = 0.0;
       const int fadeSteps = 15; // Number of steps for smooth fade
       const int fadeInterval = 50; // Milliseconds between each step
@@ -146,13 +190,7 @@ class AudioService {
   // Sound Effects Methods
   Future<void> playStudyTimeStart() async {
     try {
-      await _fadeOutMusic();
-      // Wait for fade out to complete before playing sound effect
-      await Future.delayed(const Duration(milliseconds: 800));
       await _soundEffectPlayer.play(AssetSource('audio/study_time_start.mp3'));
-      // Wait for sound effect to finish, then fade music back in
-      await Future.delayed(const Duration(milliseconds: 2500));
-      await _fadeInMusic();
     } catch (e) {
       print('Error playing study time start sound: $e');
     }
@@ -160,11 +198,7 @@ class AudioService {
 
   Future<void> playBreakTimeStart() async {
     try {
-      await _fadeOutMusic();
-      await Future.delayed(const Duration(milliseconds: 800));
       await _soundEffectPlayer.play(AssetSource('audio/break_time_start.mp3'));
-      await Future.delayed(const Duration(milliseconds: 2500));
-      await _fadeInMusic();
     } catch (e) {
       print('Error playing break time start sound: $e');
     }
@@ -172,11 +206,7 @@ class AudioService {
 
   Future<void> playEndOfSessions() async {
     try {
-      await _fadeOutMusic();
-      await Future.delayed(const Duration(milliseconds: 800));
       await _soundEffectPlayer.play(AssetSource('audio/end_of_sessions.mp3'));
-      await Future.delayed(const Duration(milliseconds: 3000));
-      await _fadeInMusic();
     } catch (e) {
       print('Error playing end of sessions sound: $e');
     }

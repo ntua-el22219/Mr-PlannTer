@@ -38,14 +38,16 @@ dependencies:
   table_calendar: ^3.0.9
   vibration: ^3.1.5       # For vibration (Haptics)
   audioplayers: ^6.0.0    # Για ήχους (Audio)
+  flutter_local_notifications: ^17.0.0  # For push notifications
   file_picker: ^8.0.0     # For file picking
-  light_sensor: ^3.0.1    # Για φωτεινότητα (Sensors)
   url_launcher: ^6.1.0    # For opening URLs
   http: ^1.1.0            # For HTTP requests
   sqflite: ^2.3.0     # For SQLite database
   sqflite_common_ffi: ^2.3.6  # For SQLite on desktop platforms
   path: ^1.9.0
   flutter_dotenv: ^6.0.0  # For environment variables
+  flutter_blue_plus: ^1.32.12  # For Bluetooth functionality
+  android_intent_plus: ^4.0.0  # For opening system settings
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

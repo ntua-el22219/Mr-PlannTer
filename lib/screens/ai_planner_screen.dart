@@ -321,250 +321,254 @@ class _AIPlannerScreenState extends State<AIPlannerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: CloudyAnimatedBackground(
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Close Button (X) - Centered at top
-            Positioned(
-              top: 80,
-              child: GestureDetector(
-                onTap: () => Navigator.pop(context, true),
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.black, width: 2.5),
-                  ),
-                  child: const Icon(Icons.close, size: 35, color: Colors.black),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Close Button (X)
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context, true),
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.black, width: 2.5),
+                        ),
+                        child: const Icon(Icons.close, size: 35, color: Colors.black),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
 
-            // Main Yellow Container
-            Positioned(
-              top: 150,
-              bottom: 100,
-              child: Container(
-                width: 650,
-                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFD54F),
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: Colors.black, width: 1.5),
-                ),
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator(color: Colors.black))
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Header
-                          Text(
-                            "📋 Unplanned Tasks (${_unplannedTasks.length})",
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue.shade900,
+              // Main Yellow Container
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFD54F),
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(color: Colors.black, width: 1.5),
+                  ),
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator(color: Colors.black))
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Header
+                            Text(
+                              "📋 Unplanned Tasks (${_unplannedTasks.length})",
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue.shade900,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 16),
+                            const SizedBox(height: 16),
 
-                          // Task list / empty state
-                          Expanded(
-                            child: _unplannedTasks.isEmpty
-                                ? Center(
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.check_circle, size: 80, color: Colors.green.shade700),
-                                        const SizedBox(height: 16),
-                                        Text(
-                                          "All tasks planned!",
-                                          style: TextStyle(
-                                            fontSize: 22,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.green.shade900,
+                            // Task list / empty state
+                            Expanded(
+                              child: _unplannedTasks.isEmpty
+                                  ? Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.check_circle, size: 80, color: Colors.green.shade700),
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            "All tasks planned!",
+                                            style: TextStyle(
+                                              fontSize: 22,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.green.shade900,
+                                            ),
                                           ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        const Text(
-                                          "No unplanned tasks to schedule",
-                                          style: TextStyle(color: Colors.black54, fontSize: 14),
-                                        ),
-                                      ],
-                                    ),
-                                  )
-                                : SingleChildScrollView(
-                                    child: Column(
-                                      children: [
-                                        ..._unplannedTasks.asMap().entries.map((entry) {
-                                          final idx = entry.key;
-                                          final task = entry.value;
-                                          final suggestion = _suggestions[idx];
-
-                                          return Container(
-                                            margin: const EdgeInsets.only(bottom: 16),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white,
-                                              borderRadius: BorderRadius.circular(12),
-                                              border: Border.all(color: Colors.black, width: 1.5),
-                                            ),
-                                            padding: const EdgeInsets.all(16),
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  task.title,
-                                                  style: const TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  "${task.duration}min • ${'⭐' * task.importance}",
-                                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
-                                                ),
-
-                                                if (suggestion != null) ...[
-                                                  const SizedBox(height: 12),
-                                                  Container(
-                                                    padding: const EdgeInsets.all(10),
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.blue.shade50,
-                                                      borderRadius: BorderRadius.circular(8),
-                                                      border: Border.all(color: Colors.blue.shade300, width: 1.5),
-                                                    ),
-                                                    child: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      children: [
-                                                        Text(
-                                                          "🤖 AI Suggestion:",
-                                                          style: TextStyle(
-                                                            fontSize: 12,
-                                                            fontWeight: FontWeight.bold,
-                                                            color: Colors.blue.shade900,
-                                                          ),
-                                                        ),
-                                                        const SizedBox(height: 4),
-                                                        Text(
-                                                          "📅 ${suggestion['date']} at ⏰ ${suggestion['time']}",
-                                                          style: const TextStyle(
-                                                            fontSize: 13,
-                                                            fontWeight: FontWeight.w600,
-                                                          ),
-                                                        ),
-                                                        if (suggestion['reason'].isNotEmpty) ...[
-                                                          const SizedBox(height: 4),
-                                                          Text(
-                                                            suggestion['reason'],
-                                                            style: TextStyle(
-                                                              fontSize: 11,
-                                                              color: Colors.grey.shade800,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 12),
-                                                  Row(
-                                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                                    children: [
-                                                      Expanded(
-                                                        child: ElevatedButton.icon(
-                                                          onPressed: () => _acceptSuggestion(idx),
-                                                          icon: const Icon(Icons.check, size: 16),
-                                                          label: const Text("Accept", style: TextStyle(fontSize: 12)),
-                                                          style: ElevatedButton.styleFrom(
-                                                            backgroundColor: Colors.green.shade600,
-                                                            foregroundColor: Colors.white,
-                                                            shape: RoundedRectangleBorder(
-                                                              borderRadius: BorderRadius.circular(8),
-                                                            ),
-                                                            padding: const EdgeInsets.symmetric(vertical: 8),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      const SizedBox(width: 8),
-                                                      Expanded(
-                                                        child: ElevatedButton.icon(
-                                                          onPressed: () => _editSuggestion(idx),
-                                                          icon: const Icon(Icons.edit, size: 16),
-                                                          label: const Text("Edit", style: TextStyle(fontSize: 12)),
-                                                          style: ElevatedButton.styleFrom(
-                                                            backgroundColor: Colors.orange.shade600,
-                                                            foregroundColor: Colors.white,
-                                                            shape: RoundedRectangleBorder(
-                                                              borderRadius: BorderRadius.circular(8),
-                                                            ),
-                                                            padding: const EdgeInsets.symmetric(vertical: 8),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      const SizedBox(width: 8),
-                                                      Expanded(
-                                                        child: ElevatedButton.icon(
-                                                          onPressed: () => _rejectSuggestion(idx),
-                                                          icon: const Icon(Icons.close, size: 16),
-                                                          label: const Text("Reject", style: TextStyle(fontSize: 12)),
-                                                          style: ElevatedButton.styleFrom(
-                                                            backgroundColor: Colors.red.shade600,
-                                                            foregroundColor: Colors.white,
-                                                            shape: RoundedRectangleBorder(
-                                                              borderRadius: BorderRadius.circular(8),
-                                                            ),
-                                                            padding: const EdgeInsets.symmetric(vertical: 8),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ],
-                                              ],
-                                            ),
-                                          );
-                                        }),
-                                      ],
-                                    ),
-                                  ),
-                          ),
-
-                          const SizedBox(height: 12),
-                          // Generate suggestions button (always visible at bottom)
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: (_isGenerating || _unplannedTasks.isEmpty)
-                                  ? null
-                                  : _generateSuggestions,
-                              icon: _isGenerating
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
+                                          const SizedBox(height: 8),
+                                          const Text(
+                                            "No unplanned tasks to schedule",
+                                            style: TextStyle(color: Colors.black54, fontSize: 14),
+                                          ),
+                                        ],
                                       ),
                                     )
-                                  : const Icon(Icons.auto_fix_high),
-                              label: Text(
-                                _isGenerating ? "Generating suggestions..." : "Generate AI Suggestions",
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue.shade900,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
+                                  : SingleChildScrollView(
+                                      child: Column(
+                                        children: [
+                                          ..._unplannedTasks.asMap().entries.map((entry) {
+                                            final idx = entry.key;
+                                            final task = entry.value;
+                                            final suggestion = _suggestions[idx];
+
+                                            return Container(
+                                              margin: const EdgeInsets.only(bottom: 16),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius: BorderRadius.circular(12),
+                                                border: Border.all(color: Colors.black, width: 1.5),
+                                              ),
+                                              padding: const EdgeInsets.all(16),
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    task.title,
+                                                    style: const TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    "${task.duration}min • ${'⭐' * task.importance}",
+                                                    style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                                                  ),
+
+                                                  if (suggestion != null) ...[
+                                                    const SizedBox(height: 12),
+                                                    Container(
+                                                      padding: const EdgeInsets.all(10),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.blue.shade50,
+                                                        borderRadius: BorderRadius.circular(8),
+                                                        border: Border.all(color: Colors.blue.shade300, width: 1.5),
+                                                      ),
+                                                      child: Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        children: [
+                                                          Text(
+                                                            "🤖 AI Suggestion:",
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              fontWeight: FontWeight.bold,
+                                                              color: Colors.blue.shade900,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(height: 4),
+                                                          Text(
+                                                            "📅 ${suggestion['date']} at ⏰ ${suggestion['time']}",
+                                                            style: const TextStyle(
+                                                              fontSize: 13,
+                                                              fontWeight: FontWeight.w600,
+                                                            ),
+                                                          ),
+                                                          if (suggestion['reason'].isNotEmpty) ...[
+                                                            const SizedBox(height: 4),
+                                                            Text(
+                                                              suggestion['reason'],
+                                                              style: TextStyle(
+                                                                fontSize: 11,
+                                                                color: Colors.grey.shade800,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 12),
+                                                    Row(
+                                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                                      children: [
+                                                        Expanded(
+                                                          child: ElevatedButton.icon(
+                                                            onPressed: () => _acceptSuggestion(idx),
+                                                            icon: const Icon(Icons.check, size: 16),
+                                                            label: const Text("Accept", style: TextStyle(fontSize: 12)),
+                                                            style: ElevatedButton.styleFrom(
+                                                              backgroundColor: Colors.green.shade600,
+                                                              foregroundColor: Colors.white,
+                                                              shape: RoundedRectangleBorder(
+                                                                borderRadius: BorderRadius.circular(8),
+                                                              ),
+                                                              padding: const EdgeInsets.symmetric(vertical: 8),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        const SizedBox(width: 8),
+                                                        Expanded(
+                                                          child: ElevatedButton.icon(
+                                                            onPressed: () => _editSuggestion(idx),
+                                                            icon: const Icon(Icons.edit, size: 16),
+                                                            label: const Text("Edit", style: TextStyle(fontSize: 12)),
+                                                            style: ElevatedButton.styleFrom(
+                                                              backgroundColor: Colors.orange.shade600,
+                                                              foregroundColor: Colors.white,
+                                                              shape: RoundedRectangleBorder(
+                                                                borderRadius: BorderRadius.circular(8),
+                                                              ),
+                                                              padding: const EdgeInsets.symmetric(vertical: 8),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        const SizedBox(width: 8),
+                                                        Expanded(
+                                                          child: ElevatedButton.icon(
+                                                            onPressed: () => _rejectSuggestion(idx),
+                                                            icon: const Icon(Icons.close, size: 16),
+                                                            label: const Text("Reject", style: TextStyle(fontSize: 12)),
+                                                            style: ElevatedButton.styleFrom(
+                                                              backgroundColor: Colors.red.shade600,
+                                                              foregroundColor: Colors.white,
+                                                              shape: RoundedRectangleBorder(
+                                                                borderRadius: BorderRadius.circular(8),
+                                                              ),
+                                                              padding: const EdgeInsets.symmetric(vertical: 8),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
+                                                ],
+                                              ),
+                                            );
+                                          }),
+                                        ],
+                                      ),
+                                    ),
+                            ),
+
+                            const SizedBox(height: 12),
+                            // Generate suggestions button (always visible at bottom)
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: (_isGenerating || _unplannedTasks.isEmpty)
+                                    ? null
+                                    : _generateSuggestions,
+                                icon: _isGenerating
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Icon(Icons.auto_fix_high),
+                                label: Text(
+                                  _isGenerating ? "Generating suggestions..." : "Generate AI Suggestions",
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue.shade900,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
