@@ -5,7 +5,7 @@ import '../data/task_model.dart';
 import '../data/recurrence_helper.dart';
 import '../widgets/cloudy_background.dart';
 import '../widgets/recurrence_picker_dialog.dart';
-import '../data/notification_service.dart';
+import '../services/notification_service.dart';
 
 class NewTaskScreen extends StatefulWidget {
   final String initialType; // 'task' or 'deadline'

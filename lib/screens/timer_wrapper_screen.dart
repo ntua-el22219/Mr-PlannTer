@@ -733,6 +733,7 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
                           context,
                           _sessionsController,
                           maxValue: 9,
+                          minValue: 1,
                         ),
                         child: Container(
                           decoration: BoxDecoration(
@@ -741,7 +742,7 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
                           ),
                           child: Center(
                             child: Text(
-                              _sessionsController.text.isEmpty ? '0' : _sessionsController.text,
+                              (_sessionsController.text.isEmpty || _sessionsController.text == '0') ? '1' : _sessionsController.text,
                               style: const TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
@@ -757,39 +758,85 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
               ),
             ),
 
-            // Play button (Figma assets: Default 66px / Variant2 72px when pressed)
+            // Play button (disabled if study/break time is zero)
             Positioned(
               top: playTop - (_isPlayPressed ? 3 : 0),
               left: (screenWidth - (_isPlayPressed ? 72 : 66)) / 2,
-              child: GestureDetector(
-                onTapDown: (_) => setState(() => _isPlayPressed = true),
-                onTapUp: (_) {
-                  setState(() => _isPlayPressed = false);
-                  _startTimerLogic();
-                },
-                onTapCancel: () => setState(() => _isPlayPressed = false),
-                child: Container(
-                  width: _isPlayPressed ? 72 : 66,
-                  height: _isPlayPressed ? 72 : 66,
-                  decoration: BoxDecoration(
-                    color: _isPlayPressed
-                        ? const Color(0xFF671A1A)
-                        : Colors.black,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
+              child: Builder(
+                builder: (context) {
+                  // Calculate current study and break time
+                  final studyMin1 = int.tryParse(_studyMin1Controller.text) ?? 0;
+                  final studyMin2 = int.tryParse(_studyMin2Controller.text) ?? 0;
+                  final studySec1 = int.tryParse(_studySec1Controller.text) ?? 0;
+                  final studySec2 = int.tryParse(_studySec2Controller.text) ?? 0;
+                  final breakMin1 = int.tryParse(_breakMin1Controller.text) ?? 0;
+                  final breakMin2 = int.tryParse(_breakMin2Controller.text) ?? 0;
+                  final breakSec1 = int.tryParse(_breakSec1Controller.text) ?? 0;
+                  final breakSec2 = int.tryParse(_breakSec2Controller.text) ?? 0;
+                  final studyMinutes = studyMin1 * 10 + studyMin2;
+                  final studySeconds = studySec1 * 10 + studySec2;
+                  final breakMinutes = breakMin1 * 10 + breakMin2;
+                  final breakSeconds = breakSec1 * 10 + breakSec2;
+                  final isZero = (studyMinutes == 0 && studySeconds == 0) || (breakMinutes == 0 && breakSeconds == 0);
+                  return GestureDetector(
+                    onTapDown: isZero ? null : (_) => setState(() => _isPlayPressed = true),
+                    onTapUp: isZero
+                        ? (_) {
+                            setState(() => _isPlayPressed = false);
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                backgroundColor: const Color(0xFFFFE082),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                  side: const BorderSide(color: Colors.black, width: 2),
+                                ),
+                                title: const Text('Invalid Time', style: TextStyle(color: Color(0xFF1E40AF))),
+                                content: const Text(
+                                  'Studying and Break time should be at least 00:01 long!',
+                                  style: TextStyle(color: Color(0xFF1E40AF)),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(ctx).pop(),
+                                    child: const Text('OK', style: TextStyle(color: Color(0xFF1E40AF))),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                        : (_) {
+                            setState(() => _isPlayPressed = false);
+                            _startTimerLogic();
+                          },
+                    onTapCancel: () => setState(() => _isPlayPressed = false),
+                    child: Opacity(
+                      opacity: isZero ? 0.5 : 1.0,
+                      child: Container(
+                        width: _isPlayPressed ? 72 : 66,
+                        height: _isPlayPressed ? 72 : 66,
+                        decoration: BoxDecoration(
+                          color: _isPlayPressed
+                              ? const Color(0xFF671A1A)
+                              : Colors.black,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.play_arrow,
+                          color: Colors.white,
+                          size: 40,
+                        ),
                       ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.play_arrow,
-                    color: Colors.white,
-                    size: 40,
-                  ),
-                ),
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -951,8 +998,8 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
   }
 
   // Show number picker wheel in bottom sheet
-  void _showNumberPickerBottomSheet(BuildContext context, TextEditingController controller, {required int maxValue}) {
-    int currentValue = int.tryParse(controller.text) ?? 0;
+  void _showNumberPickerBottomSheet(BuildContext context, TextEditingController controller, {required int maxValue, int minValue = 0}) {
+    int currentValue = int.tryParse(controller.text) ?? minValue;
     
     showModalBottomSheet(
       context: context,
@@ -982,20 +1029,20 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
               child: ListWheelScrollView(
                 itemExtent: 45,
                 onSelectedItemChanged: (index) {
-                  currentValue = index;
+                  currentValue = index + minValue;
                 },
                 children: List.generate(
-                  maxValue + 1,
+                  maxValue - minValue + 1,
                   (index) => GestureDetector(
                     onTap: () {
                       setState(() {
-                        controller.text = index.toString();
+                        controller.text = (index + minValue).toString();
                       });
                       Navigator.pop(ctx);
                     },
                     child: Center(
                       child: Text(
-                        index.toString().padLeft(maxValue > 9 ? 2 : 1, '0'),
+                        (index + minValue).toString().padLeft(maxValue > 9 ? 2 : 1, '0'),
                         style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,

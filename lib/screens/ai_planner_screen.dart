@@ -4,7 +4,7 @@ import '../data/task_model.dart';
 import '../data/gemini_service.dart';
 import '../data/recurrence_helper.dart';
 import '../widgets/cloudy_background.dart';
-import '../data/notification_service.dart'; 
+import '../services/notification_service.dart';
 
 class AIPlannerScreen extends StatefulWidget {
   const AIPlannerScreen({super.key});

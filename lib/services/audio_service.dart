@@ -69,6 +69,8 @@ class AudioService {
         await _audioPlayer.setVolume(1.0);
         _originalMusicVolume = 1.0;
         await _audioPlayer.play(DeviceFileSource(songName), volume: 1.0);
+        // Set looping for imported songs
+        await _audioPlayer.setReleaseMode(ReleaseMode.loop);
       } else {
         // It's a predefined song, load from assets
         final songPath = _getSongPath(songName);
