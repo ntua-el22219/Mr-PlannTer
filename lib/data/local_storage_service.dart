@@ -78,7 +78,6 @@ class LocalStorageService {
           'Lo-fi Beats',
           'Classical Focus',
           'Ambient Calm',
-          'Rain Sounds',
           'Nature Sounds',
         ].contains(selected)) {
       await _prefs.setString('selectedSong', 'Choose a song');

@@ -297,7 +297,12 @@ Future<void> showNotificationSetupDialog(
                   children: [
                     IconButton(icon: const Icon(Icons.remove_circle_outline), onPressed: () => setState(() => count > 1 ? count-- : null)),
                     Text("$count", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: () => setState(() => count++)),
+                    IconButton(
+                      icon: const Icon(Icons.add_circle_outline),
+                      onPressed: () => setState(() {
+                        if (count < 15) count++;
+                      }),
+                    ),
                   ],
                 ),
               ],
