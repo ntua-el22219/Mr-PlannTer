@@ -220,9 +220,7 @@ class AudioService {
     final Map<String, String> songMap = {
       'No song': '', // Empty means no song plays
       'Lo-fi Beats': 'audio/lofi_beats.mp3',
-      'Classical Focus': 'audio/classical_focus.mp3',
-      'Ambient Calm': 'audio/ambient_calm.mp3',
-      'Rain Sounds': 'audio/rain_sounds.mp3',
+      'Classical Focus': 'audio/classical_focus.mp3',      'Ambient Calm': 'audio/ambient_calm.mp3',
       'Nature Sounds': 'audio/nature_sounds.mp3',
     };
 

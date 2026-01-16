@@ -161,6 +161,48 @@ class _NewTaskScreenState extends State<NewTaskScreen> {
       try {
         final duration = int.tryParse(_durController.text.trim()) ?? 0;
 
+
+        // Prevent tasks with zero duration
+        if (_type == 'task' && duration < 1) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("❌ Task duration must be at least 1 minute!"),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 3),
+            ),
+          );
+          return;
+        }
+
+        // Unplanned tasks: max duration 1439 min
+        if (_type == 'task' && !_isPlanningExpanded && duration > 1439) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("❌ Tasks cannot last more than one day (1440 minutes)!"),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 3),
+            ),
+          );
+          return;
+        }
+
+        // Planned tasks: duration must not exceed midnight
+        if (_type == 'task' && _isPlanningExpanded) {
+          // Calculate start time in minutes since midnight
+          int startMinutes = _selectedTime.hour * 60 + _selectedTime.minute;
+          int endMinutes = startMinutes + duration;
+          if (endMinutes > 1440) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("❌ Duration cannot extend past midnight of the planned day!"),
+                backgroundColor: Colors.red,
+                duration: Duration(seconds: 3),
+              ),
+            );
+            return;
+          }
+        }
+
         // For deadlines, date/time is always required
         // For tasks, only if planning is expanded
         final isPlanned = _type == 'deadline' || _isPlanningExpanded;
@@ -258,7 +300,7 @@ class _NewTaskScreenState extends State<NewTaskScreen> {
           'scheduled_time': scheduledTime,
           'recurrence_rule': _recurrenceRule,
         };
- 
+
         int taskId; // 1. Δημιουργούμε μεταβλητή για να κρατήσουμε το ID
 
         // Προσπάθεια αποθήκευσης
@@ -847,6 +889,13 @@ class _NewTaskScreenState extends State<NewTaskScreen> {
     bool isRequired = false,
     bool isNumber = false,
   }) {
+    int? maxLength;
+    // Set character limits for title and description
+    if (controller == _titleController) {
+      maxLength = 50; // Title: max 50 chars
+    } else if (controller == _descController) {
+      maxLength = 200; // Description: max 200 chars
+    }
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -856,6 +905,7 @@ class _NewTaskScreenState extends State<NewTaskScreen> {
       child: TextFormField(
         controller: controller,
         maxLines: lines,
+        maxLength: maxLength,
         // Αν είναι αριθμός, εμφάνισε αριθμητικό πληκτρολόγιο
         keyboardType: isNumber ? TextInputType.number : TextInputType.text,
         // Αν είναι αριθμός, δέξου μόνο ψηφία (όχι γράμματα)
@@ -868,6 +918,10 @@ class _NewTaskScreenState extends State<NewTaskScreen> {
           if (isRequired && (v == null || v.trim().isEmpty)) {
             return "Required";
           }
+          // Έλεγχος μήκους
+          if (maxLength != null && v != null && v.length > maxLength) {
+            return "Max $maxLength characters";
+          }
           return null;
         },
         decoration: InputDecoration(
@@ -876,6 +930,7 @@ class _NewTaskScreenState extends State<NewTaskScreen> {
           contentPadding: const EdgeInsets.all(10),
           border: InputBorder.none,
           errorStyle: const TextStyle(height: 0.8),
+          counterText: '', // Hide default counter
         ),
       ),
     );

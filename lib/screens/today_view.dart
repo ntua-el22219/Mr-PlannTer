@@ -68,7 +68,7 @@ class _TodayViewWidgetState extends State<TodayViewWidget> {
           Padding(
             padding: const EdgeInsets.only(bottom: 20.0),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 Text(
                   'Todays tasks',
@@ -76,29 +76,6 @@ class _TodayViewWidgetState extends State<TodayViewWidget> {
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF1E40AF),
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1E40AF),
-                    foregroundColor: const Color(0xFFFCD34D),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    'Reminders',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFFFCD34D),
-                    ),
                   ),
                 ),
               ],
