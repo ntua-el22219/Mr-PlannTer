@@ -186,15 +186,12 @@ class _NewTaskScreenState extends State<NewTaskScreen> {
           return;
         }
 
-        // Planned tasks: duration must not exceed midnight
+        // Planned tasks: max duration 1 day (1440 minutes)
         if (_type == 'task' && _isPlanningExpanded) {
-          // Calculate start time in minutes since midnight
-          int startMinutes = _selectedTime.hour * 60 + _selectedTime.minute;
-          int endMinutes = startMinutes + duration;
-          if (endMinutes > 1440) {
+          if (duration > 1440) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text("❌ Duration cannot extend past midnight of the planned day!"),
+                content: Text("❌ Task duration cannot exceed 1440 minutes (24 hours)!"),
                 backgroundColor: Colors.red,
                 duration: Duration(seconds: 3),
               ),

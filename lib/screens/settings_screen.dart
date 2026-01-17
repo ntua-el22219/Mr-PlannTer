@@ -336,6 +336,7 @@ class _PlaceholderSongsScreenState extends State<PlaceholderSongsScreen> {
                       _buildSongItem(context, 'Classical Focus'),
                       _buildSongItem(context, 'Ambient Calm'),
                       _buildSongItem(context, 'Nature Sounds'),
+                      _buildSongItem(context, 'Rain Sounds'),
                       if (_importedSongName != null)
                         _buildSongItem(
                           context,

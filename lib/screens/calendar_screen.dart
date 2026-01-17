@@ -42,14 +42,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _visibleMonth = DateTime(now.year, now.month, 1);
     _minMonth = _visibleMonth;
     _currentTime = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-    // Start clock timer and initial task load
-    _timeUpdateTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      final n = DateTime.now();
-      setState(() {
-        _currentTime = '${n.hour.toString().padLeft(2, '0')}:${n.minute.toString().padLeft(2, '0')}';
-      });
-    });
     _loadTasks();
+    
+    // Update time display every second
+    _timeUpdateTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        final now = DateTime.now();
+        final newTime = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+        if (_currentTime != newTime) {
+          setState(() {
+            _currentTime = newTime;
+          });
+        }
+      }
+    });
   }
 
   @override
@@ -58,24 +64,74 @@ class _CalendarScreenState extends State<CalendarScreen> {
     super.dispose();
   }
 
+  Future<void> _loadTasks() async {
+    try {
+      final data = await DatabaseHelper().queryAllTasks();
+      if (mounted) {
+        setState(() {
+          _allTasks = data.map((e) => Task.fromMap(e)).toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading tasks: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  List<Task> _getTasksForDate(DateTime date) {
+    return _allTasks.where((task) {
+      if (task.scheduledDate.isEmpty) return false;
+      try {
+        final taskDate = DateTime.parse(task.scheduledDate);
+        final sameDay =
+            taskDate.year == date.year &&
+            taskDate.month == date.month &&
+            taskDate.day == date.day;
+
+        if (task.recurrenceRule.isEmpty) return sameDay;
+        return sameDay || RecurrenceHelper.occursOnDate(task, date);
+      } catch (_) {
+        return false; // Skip malformed dates to avoid crashes
+      }
+    }).toList();
+  }
+
+  List<Task> _getTodayTasks() {
+    final today = DateTime.now();
+    return _getTasksForDate(today);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: CloudyBackground(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final double scale = (constraints.maxHeight / 917.0).clamp(0.7, 1.4);
-            final double settingsLeft = 10 * scale;
-            final double settingsTop = 17 * scale;
-            final double settingsSize = 72 * scale;
+    return WillPopScope(
+      onWillPop: () async {
+        // Handle back navigation
+        return true;
+      },
+      child: Scaffold(
+        body: CloudyAnimatedBackground(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final double scale = (constraints.maxHeight / 917.0).clamp(0.7, 1.4);
+              final double settingsLeft = 10 * scale;
+              final double settingsTop = 17 * scale;
+              final double settingsSize = 72 * scale;
 
-            return Stack(
-              children: [
-                SafeArea(
-                  child: Column(
+              return Stack(
+                children: [
+                  Column(
                     children: [
-                      _buildHeader(context),
+                      SizedBox(height: 85 * scale), // Space for settings icon
+                      // Date/time header (hidden on Month view per design)
+                      if (_currentView != CalendarView.month &&
+                          _currentView != CalendarView.calendar)
+                        _buildHeader(context),
+
+                      // View switcher buttons (always visible) - allows screen navigation
                       _buildViewSwitcher(),
+
+                      // Scrollable content area with view switching gestures
                       Expanded(
                         child: GestureDetector(
                           behavior: HitTestBehavior.translucent,
@@ -83,11 +139,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             final velocity = details.primaryVelocity ?? 0;
                             if (velocity.abs() > 100) {
                               final currentIndex = CalendarView.values.indexOf(_currentView);
+                              
                               if (velocity < 0) {
+                                // Swiped left - move to next view
                                 if (currentIndex < CalendarView.values.length - 1) {
                                   setState(() => _currentView = CalendarView.values[currentIndex + 1]);
                                 }
                               } else {
+                                // Swiped right - move to previous view
                                 if (currentIndex > 0) {
                                   setState(() => _currentView = CalendarView.values[currentIndex - 1]);
                                 }
@@ -112,158 +171,123 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       ),
                     ],
                   ),
-                ),
-                AnimatedSettingsButton(
-                  top: settingsTop,
-                  left: settingsLeft,
-                  size: settingsSize,
-                  onTap: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (c) => const SettingsScreen(),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            );
-          },
+                  // Settings Icon (same as main page)
+                  AnimatedSettingsButton(
+                    top: settingsTop,
+                    left: settingsLeft,
+                    size: settingsSize,
+                    onTap: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (c) => const SettingsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
   }
 
-  Future<void> _loadTasks() async {
-    setState(() => _isLoading = true);
-    try {
-      final rows = await DatabaseHelper().queryAllTasks();
-      final tasks = rows.map((e) => Task.fromMap(e)).toList();
-      setState(() {
-        _allTasks = tasks;
-        _isLoading = false;
-      });
-    } catch (e) {
-      debugPrint('Error loading tasks: $e');
-      setState(() => _isLoading = false);
-    }
-  }
+  Widget _buildCalendarTaskCard(Task task) {
+    // Use importance-based color only
+    final backgroundColor = getImportanceColor(
+      type: task.type,
+      importance: task.importance,
+    );
 
-  List<Task> _getTasksForDate(DateTime date) {
-    final key = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-    final filtered = _allTasks.where((t) => t.scheduledDate == key).toList();
-    filtered.sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
-    return filtered;
-  }
-
-  List<Task> _getTodayTasks() {
-    final today = DateTime.now();
-    return _getTasksForDate(today);
-  }
-
-  Widget _buildCurrentViewContent() {
-    switch (_currentView) {
-      case CalendarView.today:
-        return Column(
-          children: [_buildTodayTasks(), const SizedBox(height: 100)],
-        );
-      case CalendarView.month:
-        return Column(
-          children: [_buildMonthlyView(), const SizedBox(height: 100)],
-        );
-      case CalendarView.calendar:
-        return Column(
-          children: [
-            _buildCalendarWidget(),
-            _buildGoogleSyncButton(),
-            const SizedBox(height: 100),
-          ],
-        );
-    }
-  }
-
-  //  Header and Switcher
-
-  Widget _buildHeader(BuildContext context) {
-    final now = DateTime.now();
-    final dateStr = now.day.toString().padLeft(2, '0');
-    final monthStr = now.month.toString().padLeft(2, '0');
-    final dayName = _getDayName(now.weekday);
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Day name
-          Text(
-            dayName,
-            style: AppTextStyles.heading2.copyWith(
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-              fontSize: 16,
-            ),
+    return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: task.type == 'deadline' ? Colors.red : const Color(0xFF1E40AF),
+            width: 2,
           ),
-
-          // Date and time zones row
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Left: Large date
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Date number
-                    Text(
-                      '$dateStr.$monthStr',
-                      style: const TextStyle(
-                        fontSize: 72,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF1E40AF), // Deep blue
-                        height: 0.9,
-                      ),
-                    ),
-                    // Month
-                    Text(
-                      _getMonthName(now.month),
-                      style: const TextStyle(
-                        fontSize: 48,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF1E40AF),
-                        height: 0.9,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Right: Current time
-              if (_currentView != CalendarView.month)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFCD34D),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    _currentTime,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              task.type == 'deadline' ? Icons.alarm : Icons.check_circle_outline,
+              color: task.type == 'deadline'
+                  ? Colors.red
+                  : const Color(0xFF1E40AF),
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    task.title,
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF1E40AF),
+                      color: Colors.black,
                     ),
                   ),
+                  if (task.description.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      task.description,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.black.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  task.scheduledTime,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                  ),
                 ),
-            ],
-          ),
-        ],
-      ),
-    );
+                if (task.type != 'deadline' && task.duration > 0) ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${task.duration} Min',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
+      );
   }
+// ...existing code...
 
   String _getCurrentTime(String timezone) {
     final now = DateTime.now();
@@ -409,11 +433,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header with title and Reminders button
+          // Header with title only
           Padding(
             padding: const EdgeInsets.only(bottom: 20.0),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 Text(
                   'Todays tasks',
@@ -421,29 +445,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF1E40AF), // Classic blue
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1E40AF), // Classic blue
-                    foregroundColor: const Color(0xFFFCD34D), // Yellow text
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    'Reminders',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFFFCD34D),
-                    ),
                   ),
                 ),
               ],
@@ -475,7 +476,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildTaskCard(Task task) {
-    // Use importance-based color
+    // Use importance-based color only
     final backgroundColor = getImportanceColor(
       type: task.type,
       importance: task.importance,
@@ -487,11 +488,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final minute = int.parse(timeParts[1]);
     final startTime = TimeOfDay(hour: hour, minute: minute);
     final endMinute = (minute + task.duration) % 60;
-    final endHour = hour + ((minute + task.duration) ~/ 60);
+    final endHour = (hour + ((minute + task.duration) / 60).floor()) % 24;
     final endTime = TimeOfDay(hour: endHour, minute: endMinute);
 
-    return GestureDetector(
-      child: Container(
+    return Container(
         padding: const EdgeInsets.all(16),
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
@@ -594,104 +594,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
               ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   void _showColorPickerDialog(Task task) {
-    final colors = [
-      const Color(0xFFC5D9F0), // Light blue (default for tasks)
-      const Color(0xFFD4BBA8), // Tan (default for deadlines)
-      const Color(0xFFFFD93D), // Bright yellow
-      const Color(0xFF6BCB77), // Green
-      const Color(0xFF4D96FF), // Bright blue
-      const Color(0xFFFF6B6B), // Red
-      const Color(0xFFA78BFA), // Purple
-      const Color(0xFFFFA500), // Orange
-    ];
-
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return Container(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Choose Task Color',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 20),
-              GridView.count(
-                crossAxisCount: 4,
-                shrinkWrap: true,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                children: colors.map((color) {
-                  final isSelected = task.colorValue == color.value;
-                  return GestureDetector(
-                    onTap: () {
-                      debugPrint('Selected color: ${color.value}');
-                      Navigator.pop(context);
-                      _updateTaskColor(task, color);
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                        border: isSelected
-                            ? Border.all(color: Colors.black, width: 3)
-                            : Border.all(color: Colors.grey.shade400, width: 1),
-                      ),
-                      child: isSelected
-                          ? const Icon(
-                              Icons.check,
-                              color: Colors.black,
-                              size: 24,
-                            )
-                          : null,
-                    ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
+    // Color picker removed: color is now determined by importance only.
   }
 
   Future<void> _updateTaskColor(Task task, Color color) async {
-    try {
-      debugPrint('Updating task ${task.id} with color ${color.value}');
-      final result = await DatabaseHelper().updateTaskColor(
-        task.id!,
-        color.value,
-      );
-      debugPrint('Update result: $result');
-      await _loadTasks(); // Reload to show updated color
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Task color updated!'),
-            duration: Duration(seconds: 1),
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('Error updating task color: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
-      }
-    }
+    // Color updating removed: color is now determined by importance only.
   }
 
   TimeOfDay? _parseTimeOfDay(String? value) {
@@ -1381,98 +1292,102 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildCalendarTaskCard(Task task) {
-    final color = getImportanceColor(
-      type: task.type,
-      importance: task.importance,
-    );
+// ...existing code...
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: task.type == 'deadline' ? Colors.red : const Color(0xFF1E40AF),
-          width: 2,
-        ),
-      ),
-      child: Row(
+  // Restore _buildHeader method
+  Widget _buildHeader(BuildContext context) {
+    final now = DateTime.now();
+    final dateStr = now.day.toString().padLeft(2, '0');
+    final monthStr = now.month.toString().padLeft(2, '0');
+    final dayName = _getDayName(now.weekday);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            task.type == 'deadline' ? Icons.alarm : Icons.check_circle_outline,
-            color: task.type == 'deadline'
-                ? Colors.red
-                : const Color(0xFF1E40AF),
-            size: 24,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  task.title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black,
-                  ),
-                ),
-                if (task.description.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    task.description,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.black.withOpacity(0.7),
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ],
+          Text(
+            dayName,
+            style: AppTextStyles.heading2.copyWith(
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+              fontSize: 16,
             ),
           ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                task.scheduledTime,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$dateStr.$monthStr',
+                      style: const TextStyle(
+                        fontSize: 72,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF1E40AF),
+                        height: 0.9,
+                      ),
+                    ),
+                    Text(
+                      _getMonthName(now.month),
+                      style: const TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF1E40AF),
+                        height: 0.9,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              if (task.type != 'deadline' && task.duration > 0) ...[
-                const SizedBox(height: 4),
+              if (_currentView != CalendarView.month)
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+                    horizontal: 16,
+                    vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(8),
+                    color: const Color(0xFFFCD34D),
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    '${task.duration} min',
+                    _currentTime,
                     style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1E40AF),
                     ),
                   ),
                 ),
-              ],
             ],
           ),
         ],
       ),
     );
+  }
+
+  // Restore _buildCurrentViewContent method
+  Widget _buildCurrentViewContent() {
+    switch (_currentView) {
+      case CalendarView.today:
+        return Column(
+          children: [_buildTodayTasks(), const SizedBox(height: 100)],
+        );
+      case CalendarView.month:
+        return Column(
+          children: [_buildMonthlyView(), const SizedBox(height: 100)],
+        );
+      case CalendarView.calendar:
+        return Column(
+          children: [
+            _buildCalendarWidget(),
+            _buildGoogleSyncButton(),
+            const SizedBox(height: 100),
+          ],
+        );
+    }
   }
 
   Widget _buildGoogleSyncButton() {

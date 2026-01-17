@@ -318,17 +318,27 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
     if (_phase == TimerPhase.studying) {
       // Αν υπάρχουν κι άλλα sessions
       if (_currentSession < _totalSessions) {
-        // Play break time start sound
-        if (soundEffectsEnabled) {
-          await _audioService.playBreakTimeStart();
-        }
+        // Check if break time is 0 - if so, skip break and go directly to next session
+        if (_breakTimeTotalSeconds == 0) {
+          setState(() {
+            _currentSession++;
+            _secondsRemaining = _studyTimeTotalSeconds;
+            _phase = TimerPhase.studying;
+          });
+          _startTicker(); // Start next study session immediately
+        } else {
+          // Play break time start sound
+          if (soundEffectsEnabled) {
+            await _audioService.playBreakTimeStart();
+          }
 
-        setState(() {
-          _phase = TimerPhase.breaking; // ΑΛΛΑΓΗ ΦΑΣΗΣ ΣΕ ΔΙΑΛΕΙΜΜΑ
-          _secondsRemaining =
-              _breakTimeTotalSeconds; // ΧΡΟΝΟΣ ΔΙΑΛΕΙΜΜΑΤΟΣ (με seconds)
-        });
-        _startTicker(); // Αυτόματη έναρξη του διαλείμματος
+          setState(() {
+            _phase = TimerPhase.breaking; // ΑΛΛΑΓΗ ΦΑΣΗΣ ΣΕ ΔΙΑΛΕΙΜΜΑ
+            _secondsRemaining =
+                _breakTimeTotalSeconds; // ΧΡΟΝΟΣ ΔΙΑΛΕΙΜΜΑΤΟΣ (με seconds)
+          });
+          _startTicker(); // Αυτόματη έναρξη του διαλείμματος
+        }
       }
       // Αν ήταν το τελευταίο session
       else {
@@ -777,7 +787,11 @@ class _TimerWrapperScreenState extends State<TimerWrapperScreen>
                   final studySeconds = studySec1 * 10 + studySec2;
                   final breakMinutes = breakMin1 * 10 + breakMin2;
                   final breakSeconds = breakSec1 * 10 + breakSec2;
-                  final isZero = (studyMinutes == 0 && studySeconds == 0) || (breakMinutes == 0 && breakSeconds == 0);
+                  final sessions = int.tryParse(_sessionsController.text) ?? 1;
+                  // Study time must always be > 0
+                  // Break time can be 0 only if sessions = 1
+                  final isZero = (studyMinutes == 0 && studySeconds == 0) || 
+                                 (breakMinutes == 0 && breakSeconds == 0 && sessions > 1);
                   return GestureDetector(
                     onTapDown: isZero ? null : (_) => setState(() => _isPlayPressed = true),
                     onTapUp: isZero

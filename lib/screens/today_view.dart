@@ -68,7 +68,7 @@ class _TodayViewWidgetState extends State<TodayViewWidget> {
           Padding(
             padding: const EdgeInsets.only(bottom: 20.0),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 Text(
                   'Todays tasks',
@@ -76,29 +76,6 @@ class _TodayViewWidgetState extends State<TodayViewWidget> {
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF1E40AF),
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1E40AF),
-                    foregroundColor: const Color(0xFFFCD34D),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    'Reminders',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFFFCD34D),
-                    ),
                   ),
                 ),
               ],
@@ -141,12 +118,12 @@ class _TodayViewWidgetState extends State<TodayViewWidget> {
     final minute = int.parse(timeParts[1]);
     final startTime = TimeOfDay(hour: hour, minute: minute);
     final endMinute = (minute + task.duration) % 60;
-    final endHour = hour + ((minute + task.duration) ~/ 60);
+    final endHour = (hour + ((minute + task.duration) ~/ 60)) % 24;
     final endTime = TimeOfDay(hour: endHour, minute: endMinute);
-    final isDeadline = task.type.toLowerCase() == 'deadline';
+    
+    final isDeadline = task.type == 'deadline';
 
-    return GestureDetector(
-      child: Container(
+    return Container(
         padding: const EdgeInsets.all(16),
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
@@ -191,11 +168,9 @@ class _TodayViewWidgetState extends State<TodayViewWidget> {
                       ),
                     ),
                     Text(
-                      'Ends in ${task.duration} min',
-                      style: const TextStyle(
+                      'Ends in 3 hours',
+                      style: TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
                       ),
                     ),
                   ],
@@ -243,7 +218,6 @@ class _TodayViewWidgetState extends State<TodayViewWidget> {
               ),
           ],
         ),
-      ),
-    );
+      );
   }
 }
