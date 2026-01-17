@@ -1,71 +1,112 @@
-# Google Calendar Integration Setup
+# Google Calendar Integration Setup για Mr. PlannTer
 
-## How to Get Google OAuth Credentials
+## Προαπαιτούμενα
+- Android Studio με Android SDK Platform 36
+- Φυσική συσκευή Android ή Emulator με Google Play Services
+- Google λογαριασμός
 
-### Step 1: Create Google Cloud Project
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select an existing one
-3. Note your project name
+## Βήμα 1: Δημιουργία Google Cloud Project
+1. Μεταβείτε στο [Google Cloud Console](https://console.cloud.google.com/)
+2. Δημιουργήστε νέο project ή επιλέξτε υπάρχον
+3. Σημειώστε το όνομα του project
 
-### Step 2: Enable Google Calendar API
-1. In the left menu, go to **APIs & Services** → **Library**
-2. Search for "Google Calendar API"
-3. Click on it and press **Enable**
+## Βήμα 2: Ενεργοποίηση Google Calendar API
+1. Στο αριστερό μενού: **APIs & Services** → **Library**
+2. Αναζητήστε "Google Calendar API"
+3. Κλικ και πατήστε **Enable**
 
-### Step 3: Create OAuth Credentials
-1. Go to **APIs & Services** → **Credentials**
-2. Click **+ CREATE CREDENTIALS** → **OAuth 2.0 Client ID**
-3. If prompted, configure the OAuth consent screen:
-   - User Type: **External** (for testing)
+## Βήμα 3: Δημιουργία Android OAuth Client
+1. Πηγαίνετε στο **APIs & Services** → **Credentials**
+2. Κλικ **+ CREATE CREDENTIALS** → **OAuth 2.0 Client ID**
+3. Αν ζητηθεί, ρυθμίστε το OAuth consent screen:
+   - User Type: **External**
    - App name: **Mr PlannTer**
-   - User support email: Your email
-   - Developer contact: Your email
-   - Click **Save and Continue** through all steps
-4. Back to **Create OAuth Client ID**:
-   - Application type: **Desktop app**
-   - Name: **Mr PlannTer Desktop**
-   - Click **Create**
-5. **Copy** the Client ID and Client Secret shown
+   - User support email: Το email σας
+   - Developer contact: Το email σας
+   - **Save and Continue** μέχρι το τέλος
+4. Επιστρέψτε στο **Create OAuth Client ID**:
+   - Application type: **Android**
+   - Name: **Mr PlannTer Android**
+   - Package name: `com.example.app_mr_plannter`
+   - SHA-1 certificate fingerprint: (Βλέπε παρακάτω πώς το βρίσκετε)
 
-### Step 4: Configure Your App
-1. In project root, copy `.env.example` to `.env`:
-   ```bash
-   copy .env.example .env
+### Πώς να βρείτε το SHA-1 fingerprint
+Για **debug keystore** (development):
+```powershell
+keytool -list -v -keystore "C:\Users\<USERNAME>\.android\debug.keystore" -alias androiddebugkey -storepass android -keypass android
+```
+Αντιγράψτε το SHA1 που εμφανίζεται (π.χ. `8C:F8:64:5A:6B:01:6D:B8:4A:81:2F:21:CF:1B:5F:B6:31:2E:1A:02`)
+
+5. Κλικ **Create**
+6. **Κατεβάστε** το `google-services.json` που δημιουργήθηκε
+
+## Βήμα 4: Εγκατάσταση google-services.json
+1. Τοποθετήστε το αρχείο που κατεβάσατε στο:
    ```
-2. Edit `.env` file and paste your credentials:
+   android/app/google-services.json
    ```
-   GOOGLE_CLIENT_ID=your_actual_client_id.apps.googleusercontent.com
-   GOOGLE_CLIENT_SECRET=your_actual_client_secret
+2. Αντικαταστήστε το υπάρχον αρχείο αν ήδη υπάρχει
+
+## Βήμα 5: Build & Test
+1. Καθαρισμός και rebuild:
+   ```powershell
+   flutter clean
+   flutter pub get
+   flutter build apk --debug
    ```
-3. Run `flutter pub get` to install dependencies
+2. Εγκατάσταση σε συσκευή/emulator:
+   ```powershell
+   flutter run
+   ```
+3. Στην εφαρμογή:
+   - Πλοηγηθείτε στην προβολή Calendar
+   - Πατήστε "Google Calendar Sync"
+   - Επιλέξτε Export, Import ή Two-way Sync
+   - Εισέλθετε με τον Google λογαριασμό σας
+   - Εγκρίνετε τα δικαιώματα
 
-### Step 5: Test
-1. Run your app: `flutter run -d windows`
-2. Go to Calendar view
-3. Click "Synchronize with Google Calendar"
-4. A browser window will open for authentication
-5. Grant permissions to your app
 
-## Security Notes
+## Σημειώσεις Ασφαλείας
 
-- ✅ `.env` file is gitignored - never commit credentials
-- ✅ Share `.env.example` as template (no secrets)
-- ✅ Each developer needs their own `.env` with credentials
-- ⚠️ For production: use a backend server to handle OAuth
+- ✅ Το `google-services.json` πρέπει να είναι στο `.gitignore` (ήδη ρυθμισμένο)
+- ✅ Κάθε developer χρειάζεται το δικό του `google-services.json` με το δικό του SHA-1
+- ⚠️ Για production: δημιουργήστε release keystore και αντίστοιχο OAuth client με release SHA-1
 
 ## Troubleshooting
 
-**Error: "No .env file found"**
-- Create `.env` file from `.env.example` template
+**Σφάλμα: "Google failed to authenticate back in the app"**
+- Βεβαιωθείτε ότι το package name στο `google-services.json` ταιριάζει με το `android/app/build.gradle.kts` (`com.example.app_mr_plannter`)
+- Ελέγξτε ότι το SHA-1 fingerprint είναι σωστό
+- Επιβεβαιώστε ότι έχετε δημιουργήσει **Android** OAuth client (όχι Desktop ή Web)
 
-**Error: "401 invalid_client"**
-- Check your Client ID and Secret are correct in `.env`
-- Ensure no extra spaces or quotes
+**Σφάλμα: "API not enabled"**
+- Στο Google Cloud Console, βεβαιωθείτε ότι το Google Calendar API είναι enabled
 
-**Error: "redirect_uri_mismatch"**
-- In Google Cloud Console, add redirect URI: `http://localhost`
-- Or use the exact URI shown in the error message
+**Η αυθεντικοποίηση δεν ολοκληρώνεται**
+- Ελέγξτε ότι η συσκευή/emulator έχει Google Play Services
+- Δοκιμάστε logout και ξανά login στον Google λογαριασμό της συσκευής
+- Βεβαιωθείτε ότι έχετε internet σύνδεση
 
-**Browser doesn't open**
-- Check url_launcher package is installed
-- Try manually copying the auth URL from console
+**Σφάλμα εγκατάστασης APK: "INSTALL_FAILED_USER_RESTRICTED"**
+- Στη συσκευή: Settings → Security → Install unknown apps → επιτρέψτε την πηγή
+- Ή στη συσκευή: Settings → Developer options → βεβαιωθείτε ότι "USB debugging" είναι ON
+
+## Επιπλέον Πληροφορίες
+
+### OAuth Consent Screen Setup
+Αν το project σας είναι σε "Testing" mode:
+- Προσθέστε τους Google λογαριασμούς που θα χρησιμοποιήσουν την εφαρμογή στη λίστα "Test users"
+- Στο OAuth consent screen → Test users → + ADD USERS
+
+### Release Build SHA-1
+Για production APK χρειάζεστε release keystore:
+1. Δημιουργήστε release keystore (αν δεν έχετε):
+   ```powershell
+   keytool -genkey -v -keystore release.keystore -alias release -keyalg RSA -keysize 2048 -validity 10000
+   ```
+2. Πάρτε το SHA-1:
+   ```powershell
+   keytool -list -v -keystore release.keystore -alias release
+   ```
+3. Δημιουργήστε νέο Android OAuth client με το release SHA-1
+4. Κατεβάστε το αντίστοιχο `google-services.json` και χρησιμοποιήστε το για production builds

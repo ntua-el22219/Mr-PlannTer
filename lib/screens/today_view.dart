@@ -68,7 +68,7 @@ class _TodayViewWidgetState extends State<TodayViewWidget> {
           Padding(
             padding: const EdgeInsets.only(bottom: 20.0),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   'Todays tasks',
@@ -76,6 +76,29 @@ class _TodayViewWidgetState extends State<TodayViewWidget> {
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF1E40AF),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () {},
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1E40AF),
+                    foregroundColor: const Color(0xFFFCD34D),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Reminders',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFFFCD34D),
+                    ),
                   ),
                 ),
               ],
@@ -120,9 +143,9 @@ class _TodayViewWidgetState extends State<TodayViewWidget> {
     final endMinute = (minute + task.duration) % 60;
     final endHour = hour + ((minute + task.duration) ~/ 60);
     final endTime = TimeOfDay(hour: endHour, minute: endMinute);
+    final isDeadline = task.type.toLowerCase() == 'deadline';
 
     return GestureDetector(
-      onTap: () => _showColorPickerDialog(task),
       child: Container(
         padding: const EdgeInsets.all(16),
         margin: const EdgeInsets.only(bottom: 12),
@@ -168,10 +191,11 @@ class _TodayViewWidgetState extends State<TodayViewWidget> {
                       ),
                     ),
                     Text(
-                      'Ends in 3 hours',
-                      style: TextStyle(
+                      'Ends in ${task.duration} min',
+                      style: const TextStyle(
                         fontSize: 12,
-                    return Container(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
                       ),
                     ),
                   ],
@@ -221,16 +245,5 @@ class _TodayViewWidgetState extends State<TodayViewWidget> {
         ),
       ),
     );
-  }
-
-  // Color picker removed: color is now determined by importance.
-
-  Future<void> _updateTaskColor(Task task, Color color) async {
-    try {
-      await DatabaseHelper().updateTaskColor(task.id!, color.value);
-      widget.onTasksUpdate();
-    } catch (e) {
-      debugPrint('Error updating task color: $e');
-    }
   }
 }
