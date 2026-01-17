@@ -10,7 +10,7 @@
 - Ενεργοποίηση «Εγκατάστασης από άγνωστες πηγές» όταν ζητηθεί.
 
 Τρόπος 1 — Εγκατάσταση μέσω APK (προτείνεται για μη ειδικούς):
-1. Κατεβάστε το αρχείο APK app-release.apk. 
+1. Κατεβάστε το αρχείο APK από τον σύνδεσμο που δίνεται παρακάτω. 
 2. Μεταφέρετε το APK στη συσκευή (ή κάντε drag-and-drop σε Emulator).
 3. Πατήστε πάνω στο APK και ολοκληρώστε την εγκατάσταση (αποδεχθείτε τυχόν προτροπές για «άγνωστες πηγές»).
 4. Ανοίξτε την εφαρμογή «Mr. PlannTer» από το εικονίδιο.
@@ -51,7 +51,7 @@ Emulator image (προτεινόμενο):
 
 Σύνδεσμοι:
 - Αποθετήριο (github repo): https://github.com/ntua-el22219/Mr-PlannTer
-- APK: https://drive.google.com/file/d/16O1jonlY30jKRCToSL2E27DC34ZKmx7U/view?usp=drive_link
+- APK αρχείο: https://drive.google.com/file/d/16O1jonlY30jKRCToSL2E27DC34ZKmx7U/view?usp=drive_link
 
 — γ) Διαφοροποιήσεις από το Πρωτότυπο (Φάση Β') —
 
