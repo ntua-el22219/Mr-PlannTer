@@ -22,7 +22,8 @@
 	- `git clone https://github.com/ntua-el22219/Mr-PlannTer`
 	- `cd Mr-PlannTer`
 3. Εγκαταστήστε εξαρτήσεις: `flutter pub get`
-4. Εκτέλεση σε συσκευή ή emulator: `flutter run`
+4. Για τα ΑPI keys αντιγράψτε το αρχείο .env που βρίσκεται στο zip file της εφαρμογής και τοποθετήστε το στο ίδιο directory με τα υπόλοιπα αρχεία του github
+5. Εκτέλεση σε συσκευή ή emulator: `flutter run`
 
 Troubleshooting:
 - Αν η εγκατάσταση APK μπλοκάρεται, ενεργοποιήστε «Άγνωστες πηγές» και βεβαιωθείτε ότι υπάρχουν επαρκείς δικαιοδοσίες/χώρος.
@@ -52,7 +53,7 @@ Emulator image (προτεινόμενο):
 
 Σύνδεσμοι:
 - Αποθετήριο (github repo): https://github.com/ntua-el22219/Mr-PlannTer
-- Zip αρχείο εφαρμογής: https://drive.google.com/file/d/1TyGuKedlCLVsDAm6h17f7xOE0w7ndLQr/view?usp=drive_link
+- Zip file της εφαρμογής: https://drive.google.com/file/d/1TyGuKedlCLVsDAm6h17f7xOE0w7ndLQr/view?usp=drive_link
 - APK αρχείο: https://drive.google.com/file/d/16O1jonlY30jKRCToSL2E27DC34ZKmx7U/view?usp=drive_link
 
 
